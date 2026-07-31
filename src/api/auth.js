@@ -5,76 +5,40 @@ export const authApi = {
     const response = await api.post('/auth/login', credentials)
     return response.data
   },
+}
 
-  register: async (userData) => {
-    const response = await api.post('/auth/register', userData)
+export const childRecordApi = {
+  create: async (data) => {
+    const response = await api.post('/childrecords', data)
+    return response.data
+  },
+  getAll: async () => {
+    const response = await api.get('/childrecords')
+    return response.data
+  },
+  update: async (id, data) => {
+    const response = await api.put(`/childrecords/${id}`, data)
+    return response.data
+  },
+  delete: async (id) => {
+    const response = await api.delete(`/childrecords/${id}`)
     return response.data
   },
 }
 
 export const reportApi = {
-  create: async (data) => {
-    const { puroks, barangay, quarter, year, remarks } = data
-    const results = []
-
-    for (const purok of puroks) {
-      if (purok.months6To11 === 0 && purok.months12To59 === 0 && purok.underweightSUW === 0) {
-        continue
-      }
-
-      const response = await api.post('/reports', {
-        barangay: barangay,
-        purok: purok.purok,
-        months6To11: purok.months6To11,
-        months12To59: purok.months12To59,
-        underweightSUW: purok.underweightSUW,
-        quarter: quarter,
-        year: year,
-        remarks: remarks
-      })
-      results.push(response.data)
-    }
-
-    return results
-  },
-
-  getAll: async (params = {}) => {
-    const response = await api.get('/reports', { params })
+  getBarangayReport: async (barangay) => {
+    const response = await api.get(`/reports/barangay/${barangay}`)
     return response.data
   },
-
-  getById: async (id) => {
-    const response = await api.get(`/reports/${id}`)
+  getOverallReport: async (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    const response = await api.get(`/reports/overall?${query}`)
     return response.data
   },
-
-  update: async (id, data) => {
-    const response = await api.put(`/reports/${id}`, data)
-    return response.data
-  },
-
-  delete: async (id) => {
-    const response = await api.delete(`/reports/${id}`)
-    return response.data
-  },
-
-  approve: async (id, remarks = null) => {
-    const response = await api.post(`/reports/${id}/approve`, remarks)
-    return response.data
-  },
-
-  getOverall: async (params = {}) => {
-    const response = await api.get('/reports/overall', { params })
-    return response.data
-  },
-
-  getBarangaySummary: async (barangay) => {
-    const response = await api.get(`/reports/barangay/${barangay}/summary`)
-    return response.data
-  },
-
-  getMyReports: async () => {
-    const response = await api.get('/reports/my-reports')
+  getChildRecords: async (barangay = null) => {
+    const params = barangay ? `?barangay=${barangay}` : ''
+    const response = await api.get(`/reports/child-records${params}`)
     return response.data
   },
 }

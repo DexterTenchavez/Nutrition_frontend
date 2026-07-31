@@ -1,19 +1,18 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
-import { reportApi } from '../api/auth'
-import { Card, Row, Col, Table, Badge, Spinner, Button } from 'react-bootstrap'
+import { childRecordApi } from '../api/auth'
+import { Card, Row, Col, Spinner, Button } from 'react-bootstrap'
 
 const Dashboard = () => {
   const { user, isAdmin } = useAuth()
   const [stats, setStats] = useState({
-    totalReports: 0,
-    pendingReports: 0,
-    approvedReports: 0,
-    barangays: 0,
+    totalRecords: 0,
+    totalBarangays: 0,
+    totalChildren: 0,
+    myRecords: 0,
   })
   const [loading, setLoading] = useState(true)
-  const [recentReports, setRecentReports] = useState([])
 
   useEffect(() => {
     fetchDashboardData()
@@ -21,18 +20,16 @@ const Dashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
-      const reports = await reportApi.getAll()
-      const approved = reports.filter(r => r.status === 'approved')
-      const pending = reports.filter(r => r.status === 'pending')
+      const records = await childRecordApi.getAll()
+      const barangays = new Set(records.map(r => r.barangay))
+      const myRecords = records.filter(r => r.recordedBy === user?.id).length
 
       setStats({
-        totalReports: reports.length,
-        pendingReports: pending.length,
-        approvedReports: approved.length,
-        barangays: new Set(reports.map(r => r.barangay)).size,
+        totalRecords: records.length,
+        totalBarangays: barangays.size,
+        totalChildren: records.length,
+        myRecords,
       })
-
-      setRecentReports(reports.slice(0, 5))
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
     } finally {
@@ -49,40 +46,81 @@ const Dashboard = () => {
     )
   }
 
+  if (isAdmin) {
+    return (
+      <div>
+        <h1 className="mb-4">Admin Dashboard</h1>
+
+        <Row className="g-4 mb-4">
+          <Col md={4}>
+            <Card className="text-center">
+              <Card.Body>
+                <h6 className="text-muted">Total Records</h6>
+                <h2 className="mb-0">{stats.totalRecords}</h2>
+              </Card.Body>
+            </Card>
+          </Col>
+          <Col md={4}>
+            <Card className="text-center border-primary">
+              <Card.Body>
+                <h6 className="text-muted">Barangays with Data</h6>
+                <h2 className="mb-0 text-primary">{stats.totalBarangays}</h2>
+              </Card.Body>
+            </Card>
+          </Col>
+          <Col md={4}>
+            <Card className="text-center border-success">
+              <Card.Body>
+                <h6 className="text-muted">Total Children</h6>
+                <h2 className="mb-0 text-success">{stats.totalChildren}</h2>
+              </Card.Body>
+            </Card>
+          </Col>
+        </Row>
+
+        <Card>
+          <Card.Header>
+            <h5 className="mb-0">Quick Actions</h5>
+          </Card.Header>
+          <Card.Body>
+            <div className="d-flex gap-3 flex-wrap">
+              <Button as={Link} to="/overall-report" variant="primary">
+                View Overall Report
+              </Button>
+              <Button as={Link} to="/barangay-report" variant="outline-primary">
+                View Barangay Report
+              </Button>
+              <Button as={Link} to="/admin/staff" variant="outline-secondary">
+                Manage Staff
+              </Button>
+              <Button as={Link} to="/data-entry" variant="outline-secondary">
+                Data Entry
+              </Button>
+            </div>
+          </Card.Body>
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <div>
-      <h1 className="mb-4">Dashboard</h1>
-      
+      <h1 className="mb-4">Welcome, {user?.username}</h1>
+
       <Row className="g-4 mb-4">
-        <Col md={3}>
-          <Card className="text-center">
-            <Card.Body>
-              <h6 className="text-muted">Total Reports</h6>
-              <h2 className="mb-0">{stats.totalReports}</h2>
-            </Card.Body>
-          </Card>
-        </Col>
-        <Col md={3}>
-          <Card className="text-center border-warning">
-            <Card.Body>
-              <h6 className="text-muted">Pending</h6>
-              <h2 className="mb-0 text-warning">{stats.pendingReports}</h2>
-            </Card.Body>
-          </Card>
-        </Col>
-        <Col md={3}>
-          <Card className="text-center border-success">
-            <Card.Body>
-              <h6 className="text-muted">Approved</h6>
-              <h2 className="mb-0 text-success">{stats.approvedReports}</h2>
-            </Card.Body>
-          </Card>
-        </Col>
-        <Col md={3}>
+        <Col md={6}>
           <Card className="text-center border-primary">
             <Card.Body>
-              <h6 className="text-muted">Barangays</h6>
-              <h2 className="mb-0 text-primary">{stats.barangays}</h2>
+              <h6 className="text-muted">My Records Submitted</h6>
+              <h2 className="mb-0 text-primary">{stats.myRecords}</h2>
+            </Card.Body>
+          </Card>
+        </Col>
+        <Col md={6}>
+          <Card className="text-center border-success">
+            <Card.Body>
+              <h6 className="text-muted">Total Children Recorded (All Staff)</h6>
+              <h2 className="mb-0 text-success">{stats.totalChildren}</h2>
             </Card.Body>
           </Card>
         </Col>
@@ -90,49 +128,17 @@ const Dashboard = () => {
 
       <Card>
         <Card.Header>
-          <h5 className="mb-0">Recent Reports</h5>
+          <h5 className="mb-0">Quick Actions</h5>
         </Card.Header>
         <Card.Body>
-          {recentReports.length === 0 ? (
-            <p className="text-muted text-center">No reports yet</p>
-          ) : (
-            <Table responsive hover>
-              <thead>
-                <tr>
-                  <th>Barangay</th>
-                  <th>Date</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentReports.map((report) => (
-                  <tr key={report.id}>
-                    <td>{report.barangay}</td>
-                    <td>{new Date(report.reportedDate).toLocaleDateString()}</td>
-                    <td>
-                      <Badge bg={
-                        report.status === 'approved' ? 'success' :
-                        report.status === 'pending' ? 'warning' : 'danger'
-                      }>
-                        {report.status}
-                      </Badge>
-                    </td>
-                    <td>
-                      <Button
-                        as={Link}
-                        to={`/barangay/${report.barangay}`}
-                        variant="outline-primary"
-                        size="sm"
-                      >
-                        View
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-          )}
+          <div className="d-flex gap-3 flex-wrap">
+            <Button as={Link} to="/data-entry" variant="primary">
+              Add Child Record
+            </Button>
+            <Button as={Link} to="/barangay-report" variant="outline-primary">
+              View Barangay Report
+            </Button>
+          </div>
         </Card.Body>
       </Card>
     </div>

@@ -36,4 +36,5 @@ api.interceptors.response.use(
   }
 )
 
+// ✅ ADD THIS - Default export
 export default api

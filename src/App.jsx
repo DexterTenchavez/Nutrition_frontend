@@ -4,6 +4,7 @@ import Navbar from './components/common/Navbar'
 import ProtectedRoute from './components/common/ProtectedRoute'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
+import DataEntry from './pages/DataEntry'
 import Reports from './pages/Reports'
 import OverallReport from './pages/OverallReport'
 import BarangayReport from './pages/BarangayReport'
@@ -36,9 +37,14 @@ function App() {
               <Dashboard />
             </ProtectedRoute>
           } />
-          <Route path="/reports" element={
+          <Route path="/data-entry" element={
+            <ProtectedRoute staffOnly>
+              <DataEntry />
+            </ProtectedRoute>
+          } />
+          <Route path="/barangay-report" element={
             <ProtectedRoute>
-              <Reports />
+              <BarangayReport />
             </ProtectedRoute>
           } />
           <Route path="/overall-report" element={
@@ -49,11 +55,6 @@ function App() {
           <Route path="/admin/staff" element={
             <ProtectedRoute adminOnly>
               <AdminStaff />
-            </ProtectedRoute>
-          } />
-          <Route path="/barangay/:name" element={
-            <ProtectedRoute>
-              <BarangayReport />
             </ProtectedRoute>
           } />
           <Route path="/" element={<Navigate to="/dashboard" />} />

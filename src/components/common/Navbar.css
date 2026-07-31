@@ -1,0 +1,133 @@
+.app-navbar {
+  background: linear-gradient(180deg, #0B4F4A 0%, #0A423E 100%);
+  padding: 0.65rem 0;
+  border-bottom: 3px solid #E3A008;
+}
+
+.app-navbar .brand-mark {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: #F5F1E8 !important;
+  letter-spacing: 0.01em;
+}
+
+.app-navbar .brand-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: #E3A008;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.app-navbar .brand-icon svg {
+  width: 19px;
+  height: 19px;
+}
+
+.app-navbar .brand-sub {
+  display: block;
+  font-size: 0.66rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #9FC7C1;
+  margin-top: -2px;
+}
+
+.app-navbar .nav-link {
+  position: relative;
+  color: #CFE6E2 !important;
+  font-weight: 500;
+  font-size: 0.92rem;
+  padding: 0.5rem 0.9rem !important;
+  margin: 0 0.1rem;
+  transition: color 0.15s ease;
+}
+
+.app-navbar .nav-link:hover {
+  color: #ffffff !important;
+}
+
+.app-navbar .nav-link::after {
+  content: '';
+  position: absolute;
+  left: 0.9rem;
+  right: 0.9rem;
+  bottom: 0.15rem;
+  height: 2px;
+  background: #E3A008;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.2s ease;
+}
+
+.app-navbar .nav-link:hover::after,
+.app-navbar .nav-link.active::after {
+  transform: scaleX(1);
+}
+
+.app-navbar .nav-link.active {
+  color: #ffffff !important;
+  font-weight: 600;
+}
+
+.app-navbar .user-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  padding: 0.3rem 0.4rem 0.3rem 0.7rem;
+}
+
+.app-navbar .role-badge {
+  font-size: 0.66rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 0.28rem 0.55rem !important;
+  border-radius: 999px !important;
+}
+
+.app-navbar .role-badge.role-admin {
+  background: #E3A008 !important;
+  color: #1A1200 !important;
+}
+
+.app-navbar .role-badge.role-staff {
+  background: #4FA095 !important;
+  color: #052824 !important;
+}
+
+.app-navbar .username-text {
+  color: #F5F1E8;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.app-navbar .logout-btn {
+  border-radius: 999px;
+  font-size: 0.8rem;
+  padding: 0.3rem 0.85rem;
+  border-color: rgba(255, 255, 255, 0.35);
+  color: #F5F1E8;
+}
+
+.app-navbar .logout-btn:hover {
+  background: #E3A008;
+  border-color: #E3A008;
+  color: #1A1200;
+}
+
+.app-navbar .nav-link:focus-visible,
+.app-navbar .logout-btn:focus-visible {
+  outline: 2px solid #E3A008;
+  outline-offset: 2px;
+}

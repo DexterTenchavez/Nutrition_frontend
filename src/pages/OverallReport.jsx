@@ -1,30 +1,106 @@
 import { useState, useEffect } from 'react'
+import { useAuth } from '../hooks/useAuth'
 import { reportApi } from '../api/auth'
-import { BARANGAYS } from '../utils/constants'
-import { Card, Row, Col, Form, Spinner, Table, Badge } from 'react-bootstrap'
+import { Card, Row, Col, Form, Spinner, Table, Button } from 'react-bootstrap'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
 
 const OverallReport = () => {
+  const { user } = useAuth()
   const [report, setReport] = useState(null)
   const [loading, setLoading] = useState(true)
   const [year, setYear] = useState(new Date().getFullYear())
   const [quarter, setQuarter] = useState('')
+  const [error, setError] = useState('')
 
   useEffect(() => {
     fetchOverallReport()
   }, [year, quarter])
 
   const fetchOverallReport = async () => {
+    setLoading(true)
+    setError('')
     try {
       const params = { year }
       if (quarter) params.quarter = quarter
-      
-      const data = await reportApi.getOverall(params)
+
+      const data = await reportApi.getOverallReport(params)
       setReport(data)
     } catch (error) {
-      console.error('Error fetching overall report:', error)
+      setError(error.response?.data?.message || 'Error fetching report')
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleExportPDF = () => {
+    if (!report) return
+
+    const doc = new jsPDF()
+    const pageWidth = doc.internal.pageSize.getWidth()
+
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(11)
+    doc.text('Republic of the Philippines', pageWidth / 2, 14, { align: 'center' })
+    doc.text('Province of Bohol', pageWidth / 2, 20, { align: 'center' })
+    doc.text('Municipality of Ubay', pageWidth / 2, 26, { align: 'center' })
+    doc.text('MUNICIPAL NUTRITION COUNCIL', pageWidth / 2, 32, { align: 'center' })
+
+    doc.setFontSize(15)
+    doc.text(`VITAMIN A ${report.year}`, pageWidth / 2, 42, { align: 'center' })
+
+    const body = (report.barangays || []).map((b, i) => [
+      i + 1,
+      b.barangay,
+      b.months6To11 || '',
+      b.months12To59 || '',
+      b.underweightSUW || ''
+    ])
+
+    body.push([
+      '', 'Total',
+      report.overallTotal?.months6To11 || 0,
+      report.overallTotal?.months12To59 || 0,
+      report.overallTotal?.underweightSUW || 0
+    ])
+
+    autoTable(doc, {
+      startY: 48,
+      head: [['#', 'BARANGAY', '6 - 11', '12 - 59', 'NO. OF CHILDREN UW & SUW']],
+      body,
+      theme: 'grid',
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [220, 230, 245], textColor: 0, fontStyle: 'bold', halign: 'center' },
+      columnStyles: {
+        0: { halign: 'center', cellWidth: 10 },
+        1: { cellWidth: 55 },
+        2: { halign: 'center' },
+        3: { halign: 'center' },
+        4: { halign: 'center' }
+      },
+      didParseCell: (data) => {
+        if (data.row.index === body.length - 1) {
+          data.cell.styles.fontStyle = 'bold'
+        }
+      }
+    })
+
+    const finalY = doc.lastAutoTable.finalY + 20
+
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'bold')
+    doc.text('PREPARED BY:', 14, finalY)
+    doc.text('NOTED BY:', pageWidth - 80, finalY)
+
+    doc.setFont('helvetica', 'normal')
+    doc.text(report.preparedBy || 'Cristine A. Macahis, MNPC', 14, finalY + 12)
+    doc.text(report.notedBy || 'Jehd Stephen O. Cutamora, RN', pageWidth - 80, finalY + 12)
+
+    doc.save(`Overall_Report_${report.year}.pdf`)
+  }
+
+  if (!user || user.role !== 'admin') {
+    return <div className="text-center py-5">Access denied. Admin only.</div>
   }
 
   if (loading) {
@@ -36,13 +112,22 @@ const OverallReport = () => {
     )
   }
 
+  if (error) {
+    return (
+      <div className="text-center py-5">
+        <div className="alert alert-danger">{error}</div>
+        <button className="btn btn-primary" onClick={fetchOverallReport}>Retry</button>
+      </div>
+    )
+  }
+
   if (!report) {
     return <div className="text-center py-5 text-muted">No data available</div>
   }
 
   return (
     <div>
-      <div className="d-flex justify-content-between align-items-center mb-4">
+      <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <h1>Overall Report - {report.year}</h1>
         <div className="d-flex gap-2">
           <Form.Select
@@ -50,7 +135,7 @@ const OverallReport = () => {
             onChange={(e) => setYear(parseInt(e.target.value))}
             style={{ width: '100px' }}
           >
-            {[2024, 2025, 2026].map(y => (
+            {[2024, 2025, 2026, 2027].map(y => (
               <option key={y} value={y}>{y}</option>
             ))}
           </Form.Select>
@@ -65,6 +150,9 @@ const OverallReport = () => {
             <option value="Q3">Q3</option>
             <option value="Q4">Q4</option>
           </Form.Select>
+          <Button variant="success" onClick={handleExportPDF}>
+            Export as PDF
+          </Button>
         </div>
       </div>
 
@@ -73,7 +161,7 @@ const OverallReport = () => {
           <Card className="text-center">
             <Card.Body>
               <h6 className="text-muted">Total Barangays</h6>
-              <h2 className="mb-0">{report.overallTotal.totalBarangays}</h2>
+              <h2 className="mb-0">{report.overallTotal?.totalBarangays || 0}</h2>
             </Card.Body>
           </Card>
         </Col>
@@ -81,7 +169,7 @@ const OverallReport = () => {
           <Card className="text-center border-info">
             <Card.Body>
               <h6 className="text-muted">6-11 months</h6>
-              <h2 className="mb-0 text-info">{report.overallTotal.totalMonths6To11}</h2>
+              <h2 className="mb-0 text-info">{report.overallTotal?.months6To11 || 0}</h2>
             </Card.Body>
           </Card>
         </Col>
@@ -89,7 +177,7 @@ const OverallReport = () => {
           <Card className="text-center border-success">
             <Card.Body>
               <h6 className="text-muted">12-59 months</h6>
-              <h2 className="mb-0 text-success">{report.overallTotal.totalMonths12To59}</h2>
+              <h2 className="mb-0 text-success">{report.overallTotal?.months12To59 || 0}</h2>
             </Card.Body>
           </Card>
         </Col>
@@ -97,60 +185,59 @@ const OverallReport = () => {
           <Card className="text-center border-warning">
             <Card.Body>
               <h6 className="text-muted">UW & SUW</h6>
-              <h2 className="mb-0 text-warning">{report.overallTotal.totalUnderweightSUW}</h2>
+              <h2 className="mb-0 text-warning">{report.overallTotal?.underweightSUW || 0}</h2>
             </Card.Body>
           </Card>
         </Col>
       </Row>
 
       <Card>
-        <Card.Header>
-          <h5 className="mb-0">Barangay Summary</h5>
+        <Card.Header className="text-center">
+          <div className="fw-bold">MUNICIPAL NUTRITION COUNCIL</div>
+          <div className="fw-bold fs-5">VITAMIN A {report.year}</div>
         </Card.Header>
         <Card.Body className="p-0">
-          <Table responsive striped hover className="mb-0">
+          <Table responsive bordered hover className="mb-0">
             <thead>
-              <tr>
-                <th>Barangay</th>
-                <th className="text-center">6-11 months</th>
-                <th className="text-center">12-59 months</th>
-                <th className="text-center">UW & SUW</th>
-                <th className="text-center">Total</th>
-                <th className="text-center">Status</th>
+              <tr className="text-center">
+                <th style={{ width: '5%' }}>#</th>
+                <th>BARANGAY</th>
+                <th style={{ width: '12%' }}>6 - 11</th>
+                <th style={{ width: '12%' }}>12 - 59</th>
+                <th style={{ width: '20%' }}>NO. OF CHILDREN UW & SUW</th>
               </tr>
             </thead>
             <tbody>
-              {report.barangayReports.map((barangay) => (
+              {report.barangays && report.barangays.map((barangay, i) => (
                 <tr key={barangay.barangay}>
+                  <td className="text-center">{i + 1}</td>
                   <td>{barangay.barangay}</td>
-                  <td className="text-center">{barangay.months6To11}</td>
-                  <td className="text-center">{barangay.months12To59}</td>
-                  <td className="text-center">{barangay.underweightSUW}</td>
-                  <td className="text-center fw-bold">{barangay.total}</td>
-                  <td className="text-center">
-                    <Badge bg={barangay.status === 'Completed' ? 'success' : 'secondary'}>
-                      {barangay.status}
-                    </Badge>
-                  </td>
+                  <td className="text-center">{barangay.months6To11 || ''}</td>
+                  <td className="text-center">{barangay.months12To59 || ''}</td>
+                  <td className="text-center">{barangay.underweightSUW || ''}</td>
                 </tr>
               ))}
               <tr className="table-primary fw-bold">
-                <td>TOTAL</td>
-                <td className="text-center">{report.overallTotal.totalMonths6To11}</td>
-                <td className="text-center">{report.overallTotal.totalMonths12To59}</td>
-                <td className="text-center">{report.overallTotal.totalUnderweightSUW}</td>
-                <td className="text-center">{report.overallTotal.grandTotal}</td>
-                <td></td>
+                <td colSpan={2}>Total</td>
+                <td className="text-center">{report.overallTotal?.months6To11 || 0}</td>
+                <td className="text-center">{report.overallTotal?.months12To59 || 0}</td>
+                <td className="text-center">{report.overallTotal?.underweightSUW || 0}</td>
               </tr>
             </tbody>
           </Table>
         </Card.Body>
       </Card>
 
-      <div className="mt-4 text-muted small">
-        <p>Prepared By: Cristine A. Macahis, MNPC</p>
-        <p>Noted By: Jehd Stephen O. Cutamora, RN</p>
-      </div>
+      <Row className="mt-4">
+        <Col md={6}>
+          <p className="fw-bold mb-1">PREPARED BY:</p>
+          <p>{report.preparedBy || 'Cristine A. Macahis, MNPC'}</p>
+        </Col>
+        <Col md={6}>
+          <p className="fw-bold mb-1">NOTED BY:</p>
+          <p>{report.notedBy || 'Jehd Stephen O. Cutamora, RN'}</p>
+        </Col>
+      </Row>
     </div>
   )
 }

@@ -2,7 +2,7 @@ import { Navigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { Spinner } from 'react-bootstrap'
 
-const ProtectedRoute = ({ children, adminOnly = false }) => {
+const ProtectedRoute = ({ children, adminOnly = false, staffOnly = false }) => {
   const { user, loading } = useAuth()
 
   if (loading) {
@@ -19,6 +19,10 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
   }
 
   if (adminOnly && user.role !== 'admin') {
+    return <Navigate to="/dashboard" replace />
+  }
+
+  if (staffOnly && user.role !== 'staff') {
     return <Navigate to="/dashboard" replace />
   }
 

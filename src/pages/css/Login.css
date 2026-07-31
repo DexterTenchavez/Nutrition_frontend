@@ -1,0 +1,123 @@
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  background: linear-gradient(160deg, #0B4F4A 0%, #0A423E 55%, #08302D 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.login-page::before {
+  content: '';
+  position: absolute;
+  width: 520px;
+  height: 520px;
+  border-radius: 50%;
+  background: rgba(227, 160, 8, 0.08);
+  top: -160px;
+  right: -160px;
+}
+
+.login-page::after {
+  content: '';
+  position: absolute;
+  width: 380px;
+  height: 380px;
+  border-radius: 50%;
+  background: rgba(79, 160, 149, 0.12);
+  bottom: -140px;
+  left: -120px;
+}
+
+.login-card {
+  border: none;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+}
+
+.login-card .card-body {
+  padding: 2.75rem 2.25rem;
+}
+
+.login-logo-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.25rem;
+}
+
+.login-logo-wrap img {
+  width: 68px;
+  height: 68px;
+  object-fit: contain;
+}
+
+.login-logo-fallback {
+  width: 68px;
+  height: 68px;
+  border-radius: 16px;
+  background: #0B4F4A;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-logo-fallback svg {
+  width: 34px;
+  height: 34px;
+}
+
+.login-title {
+  text-align: center;
+  font-weight: 700;
+  color: #0B4F4A;
+  margin-bottom: 0.15rem;
+  font-size: 1.5rem;
+}
+
+.login-subtitle {
+  text-align: center;
+  color: #6b7d7b;
+  font-size: 0.85rem;
+  margin-bottom: 1.75rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.login-form .form-label {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #0B4F4A;
+}
+
+.login-form .form-control {
+  border-radius: 9px;
+  border: 1.5px solid #DCE6E4;
+  padding: 0.6rem 0.85rem;
+}
+
+.login-form .form-control:focus {
+  border-color: #4FA095;
+  box-shadow: 0 0 0 0.2rem rgba(79, 160, 149, 0.18);
+}
+
+.login-submit-btn {
+  background: #0B4F4A;
+  border: none;
+  border-radius: 9px;
+  padding: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  transition: background 0.15s ease;
+}
+
+.login-submit-btn:hover:not(:disabled) {
+  background: #E3A008;
+  color: #1A1200;
+}
+
+.login-submit-btn:disabled {
+  background: #7fa8a4;
+}
