@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { childRecordApi } from '../api/auth'
-import { Card, Row, Col, Spinner, Button } from 'react-bootstrap'
+import { Card, Row, Col, Spinner, Button, Container } from 'react-bootstrap'
+import nutritionLogo from '../assets/nutritionlogo.jpg'
 
 const Dashboard = () => {
   const { user, isAdmin } = useAuth()
@@ -46,102 +47,130 @@ const Dashboard = () => {
     )
   }
 
+  // Header with Logo
+  const DashboardHeader = ({ title, subtitle, role }) => (
+    <div className="d-flex align-items-center gap-4 mb-4 p-3 bg-white rounded-3 shadow-sm">
+      <img 
+        src={nutritionLogo} 
+        alt="Nutrition Logo" 
+        style={{ 
+          width: '70px', 
+          height: '70px', 
+          objectFit: 'cover',
+          borderRadius: '50%',
+          border: '3px solid #198754'
+        }} 
+      />
+      <div>
+        <h1 className="display-6 fw-bold text-success mb-0">{title}</h1>
+        <p className="text-muted mb-0">{subtitle}</p>
+        <span className="badge bg-success mt-1 px-3 py-1">{role}</span>
+      </div>
+    </div>
+  )
+
+  // Stat Card Component
+  const StatCard = ({ title, value, color, icon }) => (
+    <Card className="text-center border-0 shadow-sm h-100">
+      <Card.Body className="d-flex flex-column align-items-center justify-content-center py-4">
+        <div className={`rounded-circle bg-${color}-subtle p-3 mb-2 d-flex align-items-center justify-content-center`}>
+          <i className={`bi bi-${icon} text-${color}`} style={{ fontSize: '1.8rem' }}></i>
+        </div>
+        <h2 className="fw-bold mb-0">{value}</h2>
+        <h6 className="text-muted mb-0">{title}</h6>
+      </Card.Body>
+    </Card>
+  )
+
   if (isAdmin) {
     return (
-      <div>
-        <h1 className="mb-4">Admin Dashboard</h1>
+      <Container fluid className="px-3 px-md-4">
+        <DashboardHeader 
+          title="Admin Dashboard" 
+          
+          role="Administrator"
+        />
 
         <Row className="g-4 mb-4">
-          <Col md={4}>
-            <Card className="text-center">
-              <Card.Body>
-                <h6 className="text-muted">Total Records</h6>
-                <h2 className="mb-0">{stats.totalRecords}</h2>
-              </Card.Body>
-            </Card>
+          <Col xs={12} sm={6} md={3}>
+            <StatCard title="Total Records" value={stats.totalRecords} color="primary" icon="file-text" />
           </Col>
-          <Col md={4}>
-            <Card className="text-center border-primary">
-              <Card.Body>
-                <h6 className="text-muted">Barangays with Data</h6>
-                <h2 className="mb-0 text-primary">{stats.totalBarangays}</h2>
-              </Card.Body>
-            </Card>
+          <Col xs={12} sm={6} md={3}>
+            <StatCard title="Barangays" value={stats.totalBarangays} color="info" icon="map" />
           </Col>
-          <Col md={4}>
-            <Card className="text-center border-success">
-              <Card.Body>
-                <h6 className="text-muted">Total Children</h6>
-                <h2 className="mb-0 text-success">{stats.totalChildren}</h2>
-              </Card.Body>
-            </Card>
+          <Col xs={12} sm={6} md={3}>
+            <StatCard title="Total Children" value={stats.totalChildren} color="success" icon="people" />
+          </Col>
+          <Col xs={12} sm={6} md={3}>
+            <StatCard title="Staff Records" value={stats.myRecords} color="warning" icon="person-badge" />
           </Col>
         </Row>
 
-        <Card>
-          <Card.Header>
-            <h5 className="mb-0">Quick Actions</h5>
+        <Card className="border-0 shadow-sm">
+          <Card.Header className="bg-white border-0 pt-3">
+            <h5 className="mb-0 fw-bold text-success">
+              <i className="bi bi-gear-fill me-2"></i>Quick Actions
+            </h5>
           </Card.Header>
           <Card.Body>
-            <div className="d-flex gap-3 flex-wrap">
-              <Button as={Link} to="/overall-report" variant="primary">
-                View Overall Report
+            <div className="d-flex flex-wrap gap-3">
+              <Button as={Link} to="/overall-report" variant="success" className="px-4 py-2">
+                <i className="bi bi-bar-chart-fill me-2"></i>Overall Report
               </Button>
-              <Button as={Link} to="/barangay-report" variant="outline-primary">
-                View Barangay Report
+              <Button as={Link} to="/barangay-report" variant="outline-success" className="px-4 py-2">
+                <i className="bi bi-building me-2"></i>Barangay Report
               </Button>
-              <Button as={Link} to="/admin/staff" variant="outline-secondary">
-                Manage Staff
+              <Button as={Link} to="/admin/staff" variant="outline-secondary" className="px-4 py-2">
+                <i className="bi bi-people-fill me-2"></i>Manage Staff
               </Button>
-              <Button as={Link} to="/data-entry" variant="outline-secondary">
-                Data Entry
+              <Button as={Link} to="/data-entry" variant="outline-primary" className="px-4 py-2">
+                <i className="bi bi-plus-circle-fill me-2"></i>Data Entry
               </Button>
             </div>
           </Card.Body>
         </Card>
-      </div>
+      </Container>
     )
   }
 
   return (
-    <div>
-      <h1 className="mb-4">Welcome, {user?.username}</h1>
+    <Container fluid className="px-3 px-md-4">
+      <DashboardHeader 
+        title={`BNS Dashboard`}
+        subtitle={`Welcome back, ${user?.username}!`}
+        role={user?.role?.toUpperCase() || 'STAFF'}
+      />
 
       <Row className="g-4 mb-4">
-        <Col md={6}>
-          <Card className="text-center border-primary">
-            <Card.Body>
-              <h6 className="text-muted">My Records Submitted</h6>
-              <h2 className="mb-0 text-primary">{stats.myRecords}</h2>
-            </Card.Body>
-          </Card>
+        <Col xs={12} sm={6}>
+          <StatCard title="My Records" value={stats.myRecords} color="primary" icon="file-earmark-text" />
         </Col>
-        <Col md={6}>
-          <Card className="text-center border-success">
-            <Card.Body>
-              <h6 className="text-muted">Total Children Recorded (All Staff)</h6>
-              <h2 className="mb-0 text-success">{stats.totalChildren}</h2>
-            </Card.Body>
-          </Card>
+        <Col xs={12} sm={6}>
+          <StatCard title="Total Children" value={stats.totalChildren} color="success" icon="people" />
         </Col>
       </Row>
 
-      <Card>
-        <Card.Header>
-          <h5 className="mb-0">Quick Actions</h5>
+      <Card className="border-0 shadow-sm">
+        <Card.Header className="bg-white border-0 pt-3">
+          <h5 className="mb-0 fw-bold text-success">
+            <i className="bi bi-gear-fill me-2"></i>Quick Actions
+          </h5>
         </Card.Header>
         <Card.Body>
-          <div className="d-flex gap-3 flex-wrap">
-            <Button as={Link} to="/data-entry" variant="primary">
-              Add Child Record
+          <div className="d-flex flex-wrap gap-3">
+            <Button as={Link} to="/data-entry" variant="success" className="px-4 py-2">
+              <i className="bi bi-plus-circle-fill me-2"></i>Add Child Record
             </Button>
-            <Button as={Link} to="/barangay-report" variant="outline-primary">
-              View Barangay Report
+            <Button as={Link} to="/barangay-report" variant="outline-success" className="px-4 py-2">
+              <i className="bi bi-building me-2"></i>View Barangay Report
+            </Button>
+            <Button as={Link} to="/data-entry" variant="outline-primary" className="px-4 py-2">
+              <i className="bi bi-eye-fill me-2"></i>View My Records
             </Button>
           </div>
         </Card.Body>
       </Card>
-    </div>
+    </Container>
   )
 }
 

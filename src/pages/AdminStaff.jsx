@@ -3,6 +3,7 @@ import { useAuth } from '../hooks/useAuth'
 import api from '../api/axios'
 import { BARANGAYS } from '../utils/constants'
 import { Card, Table, Button, Form, Alert, Modal, Badge, Spinner } from 'react-bootstrap'
+import nutritionLogo from '../assets/nutritionlogo.jpg'
 
 const AdminStaff = () => {
   const { user } = useAuth()
@@ -104,24 +105,56 @@ const AdminStaff = () => {
 
   return (
     <div>
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h1>Staff Management</h1>
-        <Button variant="primary" onClick={() => setShowModal(true)}>
-          + Add Staff
+      {/* Header with Logo */}
+      <div className="d-flex align-items-center gap-3 mb-4">
+        <img 
+          src={nutritionLogo} 
+          alt="Nutrition Logo" 
+          style={{ 
+            width: '50px', 
+            height: '50px', 
+            objectFit: 'cover',
+            borderRadius: '50%',
+            border: '2px solid #198754'
+          }} 
+        />
+        <div>
+          <h1 className="mb-0">Staff Management</h1>
+          <small className="text-muted">Manage BNS staff accounts</small>
+        </div>
+      </div>
+
+      <div className="d-flex justify-content-end mb-4">
+        <Button variant="success" onClick={() => setShowModal(true)}>
+          <i className="bi bi-person-plus-fill me-2"></i>+ Add Staff
         </Button>
       </div>
 
       {success && <Alert variant="success">{success}</Alert>}
       {error && <Alert variant="danger">{error}</Alert>}
 
-      <Card>
+      <Card className="border-0 shadow-sm">
         <Card.Body>
           {loading ? (
             <div className="text-center py-4">
               <Spinner animation="border" variant="primary" />
             </div>
           ) : staff.length === 0 ? (
-            <p className="text-muted text-center py-3">No staff created yet</p>
+            <div className="text-center py-5">
+              <img 
+                src={nutritionLogo} 
+                alt="Nutrition Logo" 
+                style={{ 
+                  width: '60px', 
+                  height: '60px', 
+                  objectFit: 'cover',
+                  borderRadius: '50%',
+                  border: '2px solid #198754',
+                  marginBottom: '15px'
+                }} 
+              />
+              <p className="text-muted">No staff created yet</p>
+            </div>
           ) : (
             <Table responsive hover>
               <thead>
@@ -172,7 +205,21 @@ const AdminStaff = () => {
       {/* Create Staff Modal */}
       <Modal show={showModal} onHide={() => setShowModal(false)}>
         <Modal.Header closeButton>
-          <Modal.Title>Create Staff Account</Modal.Title>
+          <Modal.Title>
+            <img 
+              src={nutritionLogo} 
+              alt="Logo" 
+              style={{ 
+                width: '30px', 
+                height: '30px', 
+                objectFit: 'cover',
+                borderRadius: '50%',
+                border: '1px solid #198754',
+                marginRight: '10px'
+              }} 
+            />
+            Create Staff Account
+          </Modal.Title>
         </Modal.Header>
         <Form onSubmit={handleSubmit}>
           <Modal.Body>
@@ -183,6 +230,7 @@ const AdminStaff = () => {
                 value={formData.username}
                 onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                 required
+                placeholder="Enter username"
               />
             </Form.Group>
 
@@ -193,6 +241,7 @@ const AdminStaff = () => {
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 required
+                placeholder="Enter email address"
               />
             </Form.Group>
 
@@ -204,6 +253,7 @@ const AdminStaff = () => {
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 required
                 minLength={6}
+                placeholder="Minimum 6 characters"
               />
             </Form.Group>
 
@@ -214,6 +264,7 @@ const AdminStaff = () => {
                 value={formData.confirmPassword}
                 onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                 required
+                placeholder="Confirm password"
               />
             </Form.Group>
 
@@ -237,7 +288,7 @@ const AdminStaff = () => {
             <Button variant="secondary" onClick={() => setShowModal(false)}>
               Cancel
             </Button>
-            <Button type="submit" variant="primary" disabled={submitting}>
+            <Button type="submit" variant="success" disabled={submitting}>
               {submitting ? 'Creating...' : 'Create Staff'}
             </Button>
           </Modal.Footer>

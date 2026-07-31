@@ -1,41 +1,25 @@
 .login-page {
   min-height: 100vh;
+  width: 100%;
+  background: #E4F3E7;
+}
+
+.login-wrap {
+  min-height: 100vh;
+  width: 100%;
   display: flex;
   align-items: center;
-  background: linear-gradient(160deg, #0B4F4A 0%, #0A423E 55%, #08302D 100%);
-  position: relative;
-  overflow: hidden;
-}
-
-.login-page::before {
-  content: '';
-  position: absolute;
-  width: 520px;
-  height: 520px;
-  border-radius: 50%;
-  background: rgba(227, 160, 8, 0.08);
-  top: -160px;
-  right: -160px;
-}
-
-.login-page::after {
-  content: '';
-  position: absolute;
-  width: 380px;
-  height: 380px;
-  border-radius: 50%;
-  background: rgba(79, 160, 149, 0.12);
-  bottom: -140px;
-  left: -120px;
+  justify-content: center;
+  padding: 1.5rem;
 }
 
 .login-card {
   border: none;
   border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 12px 40px rgba(63, 143, 93, 0.15);
   overflow: hidden;
-  position: relative;
-  z-index: 1;
+  width: 100%;
+  max-width: 400px;
 }
 
 .login-card .card-body {
@@ -58,7 +42,7 @@
   width: 68px;
   height: 68px;
   border-radius: 16px;
-  background: #0B4F4A;
+  background: #3F8F5D;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -72,14 +56,14 @@
 .login-title {
   text-align: center;
   font-weight: 700;
-  color: #0B4F4A;
+  color: #245C3B;
   margin-bottom: 0.15rem;
   font-size: 1.5rem;
 }
 
 .login-subtitle {
   text-align: center;
-  color: #6b7d7b;
+  color: #6FA484;
   font-size: 0.85rem;
   margin-bottom: 1.75rem;
   letter-spacing: 0.03em;
@@ -89,22 +73,22 @@
 .login-form .form-label {
   font-weight: 600;
   font-size: 0.85rem;
-  color: #0B4F4A;
+  color: #245C3B;
 }
 
 .login-form .form-control {
   border-radius: 9px;
-  border: 1.5px solid #DCE6E4;
+  border: 1.5px solid #D3E9D9;
   padding: 0.6rem 0.85rem;
 }
 
 .login-form .form-control:focus {
-  border-color: #4FA095;
-  box-shadow: 0 0 0 0.2rem rgba(79, 160, 149, 0.18);
+  border-color: #3F8F5D;
+  box-shadow: 0 0 0 0.2rem rgba(63, 143, 93, 0.18);
 }
 
 .login-submit-btn {
-  background: #0B4F4A;
+  background: #3F8F5D;
   border: none;
   border-radius: 9px;
   padding: 0.65rem;
@@ -114,10 +98,9 @@
 }
 
 .login-submit-btn:hover:not(:disabled) {
-  background: #E3A008;
-  color: #1A1200;
+  background: #327449;
 }
 
 .login-submit-btn:disabled {
-  background: #7fa8a4;
+  background: #A9CDB8;
 }

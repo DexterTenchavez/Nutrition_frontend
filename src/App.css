@@ -1,4 +1,8 @@
-/* App specific styles */
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+}
 
 /* Loading spinner */
 .loading-container {

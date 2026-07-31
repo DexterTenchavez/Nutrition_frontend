@@ -25,42 +25,46 @@ function App() {
   }
 
   return (
-    <div className="min-vh-100 bg-light">
-      <Navbar />
-      <main className="container py-4">
-        <Routes>
-          <Route path="/login" element={
-            user ? <Navigate to="/dashboard" /> : <Login />
-          } />
-          <Route path="/dashboard" element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          } />
-          <Route path="/data-entry" element={
-            <ProtectedRoute staffOnly>
-              <DataEntry />
-            </ProtectedRoute>
-          } />
-          <Route path="/barangay-report" element={
-            <ProtectedRoute>
-              <BarangayReport />
-            </ProtectedRoute>
-          } />
-          <Route path="/overall-report" element={
-            <ProtectedRoute adminOnly>
-              <OverallReport />
-            </ProtectedRoute>
-          } />
-          <Route path="/admin/staff" element={
-            <ProtectedRoute adminOnly>
-              <AdminStaff />
-            </ProtectedRoute>
-          } />
-          <Route path="/" element={<Navigate to="/dashboard" />} />
-        </Routes>
-      </main>
-    </div>
+    <Routes>
+      <Route path="/login" element={
+        user ? <Navigate to="/dashboard" /> : <Login />
+      } />
+      <Route path="/*" element={
+        <div className="min-vh-100 bg-light">
+          <Navbar />
+          <main className="container py-4">
+            <Routes>
+              <Route path="/dashboard" element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              } />
+              <Route path="/data-entry" element={
+                <ProtectedRoute staffOnly>
+                  <DataEntry />
+                </ProtectedRoute>
+              } />
+              <Route path="/barangay-report" element={
+                <ProtectedRoute>
+                  <BarangayReport />
+                </ProtectedRoute>
+              } />
+              <Route path="/overall-report" element={
+                <ProtectedRoute adminOnly>
+                  <OverallReport />
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/staff" element={
+                <ProtectedRoute adminOnly>
+                  <AdminStaff />
+                </ProtectedRoute>
+              } />
+              <Route path="/" element={<Navigate to="/dashboard" />} />
+            </Routes>
+          </main>
+        </div>
+      } />
+    </Routes>
   )
 }
 

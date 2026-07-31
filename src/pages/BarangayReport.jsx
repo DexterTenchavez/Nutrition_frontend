@@ -4,6 +4,7 @@ import { reportApi } from '../api/auth'
 import { Card, Spinner, Table, Button, Alert, Form } from 'react-bootstrap'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import nutritionLogo from '../assets/nutritionlogo.jpg'
 
 const BARANGAYS = [
   "Achila", "Bay-ang", "Benliw", "Biabas", "Bongbong", "Bood",
@@ -52,17 +53,22 @@ const BarangayReport = () => {
     const year = report.year || '2025'
     const barangayName = (report.barangay || name).toUpperCase()
 
-    // Title
+    // --- LOGO (top left) ---
+    const logoImg = new Image()
+    logoImg.src = nutritionLogo
+    doc.addImage(logoImg, 'JPEG', 14, 8, 22, 22)
+
+    // --- TITLE ---
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(14)
     doc.text('CONSOLIDATED REPORT ON GIVEN', pageWidth / 2, 18, { align: 'center' })
     doc.text(`VITAMIN A SUPPLEMENTARY C.Y. ${year}`, pageWidth / 2, 26, { align: 'center' })
 
-    // Barangay line
+    // --- BARANGAY LINE ---
     doc.setFontSize(11)
     doc.text(`BARANGAY: ${barangayName}`, 14, 38)
 
-    // Table rows: purok 1-7 + total
+    // --- TABLE BODY ---
     const body = (report.purokReports || []).map((p) => [
       p.purok,
       p.months6To11 || '',
@@ -89,7 +95,7 @@ const BarangayReport = () => {
 
     const finalY = doc.lastAutoTable.finalY + 25
 
-    // Signature lines
+    // --- SIGNATURE LINES ---
     doc.setFontSize(10)
     doc.setFont('helvetica', 'bold')
     doc.text('CERTIFIED CORRECT:', 14, finalY)
@@ -109,7 +115,20 @@ const BarangayReport = () => {
   return (
     <div>
       <div className="d-flex justify-content-between align-items-center mb-4">
-        <h1>Barangay Report</h1>
+        <div className="d-flex align-items-center gap-3">
+          <img 
+            src={nutritionLogo} 
+            alt="Nutrition Logo" 
+            style={{ 
+              width: '50px', 
+              height: '50px', 
+              objectFit: 'cover',
+              borderRadius: '50%',
+              border: '2px solid #198754'
+            }} 
+          />
+          <h1 className="mb-0">Barangay Report</h1>
+        </div>
         <Button as={Link} to="/dashboard" variant="secondary">
           Back to Dashboard
         </Button>
@@ -143,11 +162,25 @@ const BarangayReport = () => {
       )}
 
       {!loading && !error && report && (
-        <Card>
+        <Card className="border-0 shadow-sm">
           <Card.Body>
-            <div className="d-flex justify-content-end mb-3">
+            <div className="d-flex justify-content-between align-items-center mb-3">
+              <div className="d-flex align-items-center gap-2">
+                <img 
+                  src={nutritionLogo} 
+                  alt="Nutrition Logo" 
+                  style={{ 
+                    width: '40px', 
+                    height: '40px', 
+                    objectFit: 'cover',
+                    borderRadius: '50%',
+                    border: '2px solid #198754'
+                  }} 
+                />
+                <span className="text-muted">Barangay Report</span>
+              </div>
               <Button variant="success" onClick={handleExportPDF}>
-                Export as PDF
+                <i className="bi bi-file-pdf-fill me-2"></i>Export PDF
               </Button>
             </div>
 
