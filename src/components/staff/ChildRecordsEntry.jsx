@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react'
-import { useAuth } from '../hooks/useAuth'
-import { childRecordApi } from '../api/auth'
-import { BARANGAYS } from '../utils/constants'
-import { Card, Form, Button, Alert, Table, Row, Col, Spinner } from 'react-bootstrap'
+import { useAuth } from '../../hooks/useAuth'
+import { childRecordApi } from '../../api/auth'
+import { BARANGAYS } from '../../utils/constants'
+import { Card, Form, Button, Alert, Table, Row, Col } from 'react-bootstrap'
 
-const DataEntry = () => {
+const ChildRecordsEntry = () => {
   const { user } = useAuth()
   const [formData, setFormData] = useState({
-    barangay: '',
+    barangay: user?.barangay || '',
     purok: '',
     targetCategory: 'Child (0–59 months)',
     fullName: '',
@@ -50,20 +50,16 @@ const DataEntry = () => {
         height: parseFloat(formData.height),
       }
 
-      console.log('📤 Sending data to backend:', JSON.stringify(data, null, 2))
-
       if (editingId) {
-        console.log(`📝 Updating record ID: ${editingId}`)
         await childRecordApi.update(editingId, data)
         setSuccess('Record updated successfully!')
       } else {
-        console.log('🆕 Creating new record')
         await childRecordApi.create(data)
         setSuccess('Record saved successfully!')
       }
 
       setFormData({
-        barangay: '',
+        barangay: user?.barangay || '',
         purok: '',
         targetCategory: 'Child (0–59 months)',
         fullName: '',
@@ -75,12 +71,6 @@ const DataEntry = () => {
       setEditingId(null)
       fetchRecords()
     } catch (error) {
-      console.error('❌ Error saving record:', error)
-      console.error('❌ Error response:', error.response?.data)
-      console.error('❌ Error status:', error.response?.status)
-      console.error('❌ Error message:', error.message)
-      
-      // Show detailed error message
       const errorMsg = error.response?.data?.message || error.message || 'Error saving record'
       setError(errorMsg)
     } finally {
@@ -89,7 +79,6 @@ const DataEntry = () => {
   }
 
   const handleEdit = (record) => {
-    console.log('✏️ Editing record:', record)
     setFormData({
       barangay: record.barangay,
       purok: record.purok,
@@ -106,22 +95,20 @@ const DataEntry = () => {
   const handleDelete = async (id) => {
     if (!confirm('Are you sure you want to delete this record?')) return
     try {
-      console.log(`🗑️ Deleting record ID: ${id}`)
       await childRecordApi.delete(id)
       fetchRecords()
     } catch (error) {
-      console.error('❌ Error deleting record:', error)
       alert('Error deleting record')
     }
   }
 
   return (
     <div>
-      <h1 className="mb-4">BNS Nutrition Data Portal</h1>
+      <h4 className="mb-4">Child Records (0-59 months)</h4>
 
       <Card className="mb-4">
         <Card.Header>
-          <h5 className="mb-0">{editingId ? 'Edit' : 'New'} Health & Nutrition Entry</h5>
+          <h6 className="mb-0">{editingId ? 'Edit' : 'New'} Record</h6>
         </Card.Header>
         <Card.Body>
           {error && <Alert variant="danger">{error}</Alert>}
@@ -136,6 +123,7 @@ const DataEntry = () => {
                     value={formData.barangay}
                     onChange={(e) => setFormData({ ...formData, barangay: e.target.value })}
                     required
+                   
                   >
                     <option value="">Select Barangay</option>
                     {BARANGAYS.map((b) => (
@@ -164,17 +152,6 @@ const DataEntry = () => {
             <Row>
               <Col md={6}>
                 <Form.Group className="mb-3">
-                  <Form.Label>Target Category</Form.Label>
-                  <Form.Select
-                    value={formData.targetCategory}
-                    onChange={(e) => setFormData({ ...formData, targetCategory: e.target.value })}
-                  >
-                    <option>Child (0–59 months)</option>
-                  </Form.Select>
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group className="mb-3">
                   <Form.Label>Full Name</Form.Label>
                   <Form.Control
                     type="text"
@@ -185,10 +162,7 @@ const DataEntry = () => {
                   />
                 </Form.Group>
               </Col>
-            </Row>
-
-            <Row>
-              <Col md={4}>
+              <Col md={6}>
                 <Form.Group className="mb-3">
                   <Form.Label>Age (Months)</Form.Label>
                   <Form.Control
@@ -200,6 +174,9 @@ const DataEntry = () => {
                   />
                 </Form.Group>
               </Col>
+            </Row>
+
+            <Row>
               <Col md={4}>
                 <Form.Group className="mb-3">
                   <Form.Label>Weight (KG)</Form.Label>
@@ -215,7 +192,7 @@ const DataEntry = () => {
               </Col>
               <Col md={4}>
                 <Form.Group className="mb-3">
-                  <Form.Label>Height / Length (CM)</Form.Label>
+                  <Form.Label>Height (CM)</Form.Label>
                   <Form.Control
                     type="number"
                     step="0.1"
@@ -226,32 +203,33 @@ const DataEntry = () => {
                   />
                 </Form.Group>
               </Col>
+              <Col md={4}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Nutritional Status</Form.Label>
+                  <Form.Select
+                    value={formData.nutritionalStatus}
+                    onChange={(e) => setFormData({ ...formData, nutritionalStatus: e.target.value })}
+                    required
+                  >
+                    <option value="">Select Status</option>
+                    <option value="Normal">Normal</option>
+                    <option value="MAM">MAM</option>
+                    <option value="SAM">SAM</option>
+                    <option value="Underweight">Underweight</option>
+                    <option value="Severely Underweight">Severely Underweight</option>
+                  </Form.Select>
+                </Form.Group>
+              </Col>
             </Row>
 
-            <Form.Group className="mb-3">
-              <Form.Label>Nutritional Status</Form.Label>
-              <Form.Select
-                value={formData.nutritionalStatus}
-                onChange={(e) => setFormData({ ...formData, nutritionalStatus: e.target.value })}
-                required
-              >
-                <option value="">Select Status</option>
-                <option value="Normal">Normal</option>
-                <option value="MAM">MAM</option>
-                <option value="SAM">SAM</option>
-                <option value="Underweight">Underweight</option>
-                <option value="Severely Underweight">Severely Underweight</option>
-              </Form.Select>
-            </Form.Group>
-
             <Button type="submit" variant="primary" disabled={loading}>
-              {loading ? 'Saving...' : (editingId ? 'Update Record' : 'Save Record')}
+              {loading ? 'Saving...' : (editingId ? 'Update' : 'Save')}
             </Button>
             {editingId && (
               <Button variant="secondary" className="ms-2" onClick={() => {
                 setEditingId(null)
                 setFormData({
-                  barangay: '',
+                  barangay: user?.barangay || '',
                   purok: '',
                   targetCategory: 'Child (0–59 months)',
                   fullName: '',
@@ -270,10 +248,7 @@ const DataEntry = () => {
 
       <Card>
         <Card.Header>
-          <div className="d-flex justify-content-between align-items-center">
-            <h5 className="mb-0">Gathered Records</h5>
-            <Button variant="success" size="sm">Export to Excel (CSV)</Button>
-          </div>
+          <h6 className="mb-0">Records</h6>
         </Card.Header>
         <Card.Body className="p-0">
           <Table responsive hover className="mb-0">
@@ -321,4 +296,4 @@ const DataEntry = () => {
   )
 }
 
-export default DataEntry
+export default ChildRecordsEntry

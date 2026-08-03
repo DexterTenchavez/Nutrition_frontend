@@ -4,11 +4,20 @@ import Navbar from './components/common/Navbar'
 import ProtectedRoute from './components/common/ProtectedRoute'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
-import DataEntry from './pages/DataEntry'
 import Reports from './pages/Reports'
 import OverallReport from './pages/OverallReport'
 import BarangayReport from './pages/BarangayReport'
 import AdminStaff from './pages/AdminStaff'
+import StaffLayout from './components/layout/StaffLayout'
+import ChildRecordsEntry from './components/staff/ChildRecordsEntry'
+import AnimalRaisingEntry from './components/staff/AnimalRaisingEntry'
+import PotableWaterEntry from './components/staff/PotableWaterEntry'
+import IodizedSaltEntry from './components/staff/IodizedSaltEntry'
+import CREntry from './components/staff/CREntry'
+import BackyardGardeningEntry from './components/staff/BackyardGardeningEntry'
+import PregnantWomenEntry from './components/staff/PregnantWomenEntry'
+import VegetableSeedEntry from './components/staff/VegetableSeedEntry'
+import AnimalDispersalEntry from './components/staff/AnimalDispersalEntry'
 
 function App() {
   const { user, loading } = useAuth()
@@ -32,16 +41,11 @@ function App() {
       <Route path="/*" element={
         <div className="min-vh-100 bg-light">
           <Navbar />
-          <main className="container py-4">
+          <main>
             <Routes>
               <Route path="/dashboard" element={
                 <ProtectedRoute>
                   <Dashboard />
-                </ProtectedRoute>
-              } />
-              <Route path="/data-entry" element={
-                <ProtectedRoute staffOnly>
-                  <DataEntry />
                 </ProtectedRoute>
               } />
               <Route path="/barangay-report" element={
@@ -59,6 +63,22 @@ function App() {
                   <AdminStaff />
                 </ProtectedRoute>
               } />
+              <Route path="/staff" element={
+                <ProtectedRoute staffOnly>
+                  <StaffLayout />
+                </ProtectedRoute>
+              }>
+                <Route path="child-records" element={<ChildRecordsEntry />} />
+                <Route path="animal-raising" element={<AnimalRaisingEntry />} />
+                <Route path="potable-water" element={<PotableWaterEntry />} />
+                <Route path="iodized-salt" element={<IodizedSaltEntry />} />
+                <Route path="cr" element={<CREntry />} />
+                <Route path="backyard-gardening" element={<BackyardGardeningEntry />} />
+                <Route path="pregnant-women" element={<PregnantWomenEntry />} />
+                <Route path="vegetable-seeds" element={<VegetableSeedEntry />} />
+                <Route path="animal-dispersal" element={<AnimalDispersalEntry />} />
+                <Route path="" element={<Navigate to="/staff/child-records" />} />
+              </Route>
               <Route path="/" element={<Navigate to="/dashboard" />} />
             </Routes>
           </main>

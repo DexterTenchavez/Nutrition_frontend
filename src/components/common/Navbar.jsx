@@ -15,10 +15,10 @@ const Navbar = () => {
 
   if (!user) return null
 
-  const isActive = (path) => location.pathname === path
+  const isActive = (path) => location.pathname === path || location.pathname.startsWith(path)
 
   return (
-    <BsNavbar expand="lg" className="app-navbar shadow-sm" variant="dark">
+    <BsNavbar expand="lg" sticky="top" className="app-navbar shadow-sm" variant="dark">
       <Container>
         <BsNavbar.Brand as={Link} to="/dashboard" className="brand-mark">
           <span className="brand-icon">
@@ -40,15 +40,15 @@ const Navbar = () => {
               Dashboard
             </Nav.Link>
             {!isAdmin && (
-              <Nav.Link as={Link} to="/data-entry" className={isActive('/data-entry') ? 'active' : ''}>
+              <Nav.Link as={Link} to="/staff/child-records" className={location.pathname.startsWith('/staff') ? 'active' : ''}>
                 Data Entry
               </Nav.Link>
             )}
-            <Nav.Link as={Link} to="/barangay-report" className={isActive('/barangay-report') ? 'active' : ''}>
-              Barangay Report
-            </Nav.Link>
             {isAdmin && (
               <>
+                <Nav.Link as={Link} to="/barangay-report" className={isActive('/barangay-report') ? 'active' : ''}>
+                  Barangay Report
+                </Nav.Link>
                 <Nav.Link as={Link} to="/overall-report" className={isActive('/overall-report') ? 'active' : ''}>
                   Overall Report
                 </Nav.Link>
