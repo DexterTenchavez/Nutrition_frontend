@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { reportApi } from '../api/auth'
-import ReportForm from '../components/reports/ReportForm'
-import ReportTable from '../components/reports/ReportTable'
 import { BARANGAYS } from '../utils/constants'
 import { Button, Card, Row, Col, Form, Spinner } from 'react-bootstrap'
 
