@@ -104,3 +104,32 @@
 .login-submit-btn:disabled {
   background: #A9CDB8;
 }
+
+.password-input-wrapper {
+  position: relative;
+}
+
+.password-input-wrapper .form-control {
+  padding-right: 45px;
+}
+
+.password-toggle-btn {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 0;
+  color: #6c757d;
+  border: none;
+  background: transparent;
+  z-index: 10;
+}
+
+.password-toggle-btn:hover {
+  color: #3F8F5D;
+  background: transparent;
+}
+
+.password-toggle-btn:focus {
+  box-shadow: none;
+}
