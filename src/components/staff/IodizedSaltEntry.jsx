@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { iodizedSaltApi } from '../../api/reports'
 import { BARANGAYS } from '../../utils/constants'
-import { Card, Form, Button, Alert, Table, Row, Col } from 'react-bootstrap'
+import { Card, Form, Button, Alert, Table, Row, Col, Pagination } from 'react-bootstrap'
+import { FaSearch, FaTimes, FaFilter } from 'react-icons/fa'
 
 const IodizedSaltEntry = () => {
   const { user } = useAuth()
@@ -23,30 +24,96 @@ const IodizedSaltEntry = () => {
     oilUFC: false,
     oilJolly: false,
     oilOthers: '',
-    preparedBy: '',
-    notedBy: '',
-    approvedBy: ''
+    recordedDate: new Date().toISOString().split('T')[0],
+    recordedBy: user?.username || ''
   })
   const [records, setRecords] = useState([])
+  const [filteredRecords, setFilteredRecords] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [editingId, setEditingId] = useState(null)
   const [selectedBarangay, setSelectedBarangay] = useState(user?.barangay || '')
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const [recordsPerPage, setRecordsPerPage] = useState(15)
+
+  // Search and Filter state
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filters, setFilters] = useState({
+    purok: '',
+  })
+  const [showFilters, setShowFilters] = useState(false)
 
   useEffect(() => {
     if (selectedBarangay) {
       fetchRecords()
     }
-  }, [selectedBarangay])
+  }, [selectedBarangay, selectedDate])
+
+  useEffect(() => {
+    applyFiltersAndSearch()
+  }, [searchTerm, records, filters])
 
   const fetchRecords = async () => {
     try {
       const data = await iodizedSaltApi.getByBarangay(selectedBarangay)
       setRecords(data)
+      setFilteredRecords(data)
     } catch (error) {
       console.error('Error fetching records:', error)
     }
+  }
+
+  const applyFiltersAndSearch = () => {
+    let filtered = [...records]
+
+    // Search by store name only
+    if (searchTerm.trim()) {
+      const search = searchTerm.toLowerCase().trim()
+      filtered = filtered.filter(record =>
+        record.storeName?.toLowerCase().includes(search)
+      )
+    }
+
+    // Apply filters
+    if (filters.purok) {
+      filtered = filtered.filter(record => record.purok === parseInt(filters.purok))
+    }
+
+    setFilteredRecords(filtered)
+    setCurrentPage(1)
+  }
+
+  // Get current records for pagination
+  const indexOfLastRecord = currentPage * recordsPerPage
+  const indexOfFirstRecord = indexOfLastRecord - recordsPerPage
+  const currentRecords = filteredRecords.slice(indexOfFirstRecord, indexOfLastRecord)
+  const totalPages = Math.ceil(filteredRecords.length / recordsPerPage)
+
+  // Change page
+  const paginate = (pageNumber) => setCurrentPage(pageNumber)
+
+  // Next/Previous page
+  const nextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1)
+    }
+  }
+
+  const prevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1)
+    }
+  }
+
+  // Handle page size change
+  const handlePageSizeChange = (e) => {
+    const newSize = parseInt(e.target.value)
+    setRecordsPerPage(newSize)
+    setCurrentPage(1)
   }
 
   const handleSubmit = async (e) => {
@@ -58,7 +125,8 @@ const IodizedSaltEntry = () => {
     try {
       const data = {
         ...formData,
-        purok: parseInt(formData.purok)
+        purok: parseInt(formData.purok),
+        recordedDate: selectedDate
       }
 
       if (editingId) {
@@ -86,9 +154,8 @@ const IodizedSaltEntry = () => {
         oilUFC: false,
         oilJolly: false,
         oilOthers: '',
-        preparedBy: '',
-        notedBy: '',
-        approvedBy: ''
+        recordedDate: new Date().toISOString().split('T')[0],
+        recordedBy: user?.username || ''
       })
       setEditingId(null)
       fetchRecords()
@@ -101,6 +168,8 @@ const IodizedSaltEntry = () => {
   }
 
   const handleEdit = (record) => {
+    const formattedDate = record.recordedDate ? record.recordedDate.split('T')[0] : new Date().toISOString().split('T')[0]
+
     setFormData({
       barangay: record.barangay,
       purok: record.purok,
@@ -118,10 +187,10 @@ const IodizedSaltEntry = () => {
       oilUFC: record.oilUFC,
       oilJolly: record.oilJolly,
       oilOthers: record.oilOthers || '',
-      preparedBy: record.preparedBy || '',
-      notedBy: record.notedBy || '',
-      approvedBy: record.approvedBy || ''
+      recordedDate: formattedDate,
+      recordedBy: record.recordedBy || user?.username || ''
     })
+    setSelectedDate(formattedDate)
     setEditingId(record.id)
   }
 
@@ -135,12 +204,78 @@ const IodizedSaltEntry = () => {
     }
   }
 
+  const clearSearch = () => {
+    setSearchTerm('')
+  }
+
+  const clearFilters = () => {
+    setFilters({
+      purok: '',
+    })
+    setSearchTerm('')
+    setShowFilters(false)
+  }
+
+  const handleFilterChange = (field, value) => {
+    setFilters({ ...filters, [field]: value })
+  }
+
+  // Render pagination items
+  const renderPagination = () => {
+    let items = []
+    const maxVisible = 5
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2))
+    let endPage = Math.min(totalPages, startPage + maxVisible - 1)
+
+    if (endPage - startPage + 1 < maxVisible) {
+      startPage = Math.max(1, endPage - maxVisible + 1)
+    }
+
+    if (startPage > 1) {
+      items.push(
+        <Pagination.Item key={1} onClick={() => paginate(1)}>
+          1
+        </Pagination.Item>
+      )
+      if (startPage > 2) {
+        items.push(<Pagination.Ellipsis key="ellipsis1" />)
+      }
+    }
+
+    for (let number = startPage; number <= endPage; number++) {
+      items.push(
+        <Pagination.Item
+          key={number}
+          active={number === currentPage}
+          onClick={() => paginate(number)}
+        >
+          {number}
+        </Pagination.Item>
+      )
+    }
+
+    if (endPage < totalPages) {
+      if (endPage < totalPages - 1) {
+        items.push(<Pagination.Ellipsis key="ellipsis2" />)
+      }
+      items.push(
+        <Pagination.Item key={totalPages} onClick={() => paginate(totalPages)}>
+          {totalPages}
+        </Pagination.Item>
+      )
+    }
+
+    return items
+  }
+
+  const pageSizeOptions = [5, 10, 15, 25, 50, 100]
+
   return (
     <div>
       <h4 className="mb-4">Sari-Sari Stores Selling Iodized Salt</h4>
 
       <Row className="mb-3">
-        <Col md={6}>
+        <Col md={4}>
           <Form.Group>
             <Form.Label>Barangay</Form.Label>
             <Form.Select
@@ -152,6 +287,16 @@ const IodizedSaltEntry = () => {
                 <option key={b} value={b}>{b}</option>
               ))}
             </Form.Select>
+          </Form.Group>
+        </Col>
+        <Col md={4}>
+          <Form.Group>
+            <Form.Label>Record Date</Form.Label>
+            <Form.Control
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+            />
           </Form.Group>
         </Col>
       </Row>
@@ -221,14 +366,12 @@ const IodizedSaltEntry = () => {
                 />
               </Col>
               <Col md={3}>
-                <Form.Group>
-                  <Form.Control
-                    type="text"
-                    placeholder="Others"
-                    value={formData.fineSaltOthers}
-                    onChange={(e) => setFormData({ ...formData, fineSaltOthers: e.target.value })}
-                  />
-                </Form.Group>
+                <Form.Control
+                  type="text"
+                  placeholder="Others"
+                  value={formData.fineSaltOthers}
+                  onChange={(e) => setFormData({ ...formData, fineSaltOthers: e.target.value })}
+                />
               </Col>
             </Row>
 
@@ -312,39 +455,6 @@ const IodizedSaltEntry = () => {
               </Col>
             </Row>
 
-            <Row>
-              <Col md={4}>
-                <Form.Group className="mb-3">
-                  <Form.Label>Prepared By</Form.Label>
-                  <Form.Control
-                    type="text"
-                    value={formData.preparedBy}
-                    onChange={(e) => setFormData({ ...formData, preparedBy: e.target.value })}
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={4}>
-                <Form.Group className="mb-3">
-                  <Form.Label>Noted By</Form.Label>
-                  <Form.Control
-                    type="text"
-                    value={formData.notedBy}
-                    onChange={(e) => setFormData({ ...formData, notedBy: e.target.value })}
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={4}>
-                <Form.Group className="mb-3">
-                  <Form.Label>Approved By</Form.Label>
-                  <Form.Control
-                    type="text"
-                    value={formData.approvedBy}
-                    onChange={(e) => setFormData({ ...formData, approvedBy: e.target.value })}
-                  />
-                </Form.Group>
-              </Col>
-            </Row>
-
             <Button type="submit" variant="primary" disabled={loading}>
               {loading ? 'Saving...' : (editingId ? 'Update' : 'Save')}
             </Button>
@@ -368,10 +478,10 @@ const IodizedSaltEntry = () => {
                   oilUFC: false,
                   oilJolly: false,
                   oilOthers: '',
-                  preparedBy: '',
-                  notedBy: '',
-                  approvedBy: ''
+                  recordedDate: new Date().toISOString().split('T')[0],
+                  recordedBy: user?.username || ''
                 })
+                setSelectedDate(new Date().toISOString().split('T')[0])
               }}>
                 Cancel
               </Button>
@@ -382,26 +492,98 @@ const IodizedSaltEntry = () => {
 
       <Card>
         <Card.Header>
-          <h6 className="mb-0">Records</h6>
+          <Row className="align-items-center">
+            <Col>
+              <h6 className="mb-0">Records ({filteredRecords.length} total)</h6>
+            </Col>
+            <Col md={6}>
+              <div className="d-flex align-items-center gap-2">
+                <div className="position-relative w-100">
+                  <Form.Control
+                    type="text"
+                    placeholder="Search by store name..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pe-5"
+                  />
+                  {searchTerm && (
+                    <Button
+                      variant="link"
+                      className="position-absolute end-0 top-50 translate-middle-y text-decoration-none p-0 me-2"
+                      onClick={clearSearch}
+                      style={{ color: '#6c757d' }}
+                    >
+                      <FaTimes />
+                    </Button>
+                  )}
+                </div>
+                <Button
+                  variant={showFilters ? "primary" : "outline-secondary"}
+                  onClick={() => setShowFilters(!showFilters)}
+                >
+                  <FaFilter /> Filters
+                </Button>
+                {(searchTerm || Object.values(filters).some(v => v)) && (
+                  <Button variant="danger" size="sm" onClick={clearFilters}>
+                    Clear All
+                  </Button>
+                )}
+              </div>
+            </Col>
+          </Row>
         </Card.Header>
+
+        {/* Filter Section */}
+        {showFilters && (
+          <Card.Body className="bg-light border-bottom">
+            <Row>
+              <Col md={4}>
+                <Form.Group className="mb-2">
+                  <Form.Label>Purok</Form.Label>
+                  <Form.Select
+                    value={filters.purok}
+                    onChange={(e) => handleFilterChange('purok', e.target.value)}
+                  >
+                    <option value="">All Puroks</option>
+                    {[1, 2, 3, 4, 5, 6, 7].map((p) => (
+                      <option key={p} value={p}>Purok {p}</option>
+                    ))}
+                  </Form.Select>
+                </Form.Group>
+              </Col>
+            </Row>
+          </Card.Body>
+        )}
+
         <Card.Body className="p-0">
           <Table responsive hover className="mb-0" size="sm">
             <thead>
               <tr>
+                <th>#</th>
+                <th>Barangay</th>
                 <th>Purok</th>
-                <th>Store</th>
+                <th>Store Name</th>
                 <th>Fine Salt</th>
                 <th>Rock Salt</th>
                 <th>Oil</th>
+                <th>Recorded Date</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {records.length === 0 ? (
-                <tr><td colSpan="6" className="text-center py-3 text-muted">No records found</td></tr>
+              {currentRecords.length === 0 ? (
+                <tr>
+                  <td colSpan="9" className="text-center py-3 text-muted">
+                    {searchTerm || Object.values(filters).some(v => v)
+                      ? 'No records found matching your filters'
+                      : 'No records found'}
+                  </td>
+                </tr>
               ) : (
-                records.map((record) => (
+                currentRecords.map((record, index) => (
                   <tr key={record.id}>
+                    <td>{indexOfFirstRecord + index + 1}</td>
+                    <td>{record.barangay}</td>
                     <td>Purok {record.purok}</td>
                     <td>{record.storeName}</td>
                     <td>
@@ -423,6 +605,7 @@ const IodizedSaltEntry = () => {
                       {record.oilJolly && 'Jolly '}
                       {record.oilOthers}
                     </td>
+                    <td>{record.recordedDate ? new Date(record.recordedDate).toLocaleDateString() : 'N/A'}</td>
                     <td>
                       <Button variant="outline-primary" size="sm" onClick={() => handleEdit(record)}>
                         Edit
@@ -437,6 +620,43 @@ const IodizedSaltEntry = () => {
             </tbody>
           </Table>
         </Card.Body>
+
+        {/* Pagination Footer */}
+        {filteredRecords.length > 0 && (
+          <Card.Footer>
+            <Row className="align-items-center">
+              <Col md={4} className="text-muted">
+                Showing {indexOfFirstRecord + 1} to {Math.min(indexOfLastRecord, filteredRecords.length)} of {filteredRecords.length} records
+              </Col>
+              <Col md={4} className="d-flex justify-content-center">
+                <Pagination className="mb-0">
+                  <Pagination.Prev
+                    onClick={prevPage}
+                    disabled={currentPage === 1}
+                  />
+                  {renderPagination()}
+                  <Pagination.Next
+                    onClick={nextPage}
+                    disabled={currentPage === totalPages}
+                  />
+                </Pagination>
+              </Col>
+              <Col md={4} className="d-flex justify-content-end align-items-center gap-2">
+                <span className="text-muted" style={{ fontSize: '14px' }}>Rows per page:</span>
+                <Form.Select
+                  value={recordsPerPage}
+                  onChange={handlePageSizeChange}
+                  style={{ width: '80px', display: 'inline-block' }}
+                  size="sm"
+                >
+                  {pageSizeOptions.map(size => (
+                    <option key={size} value={size}>{size}</option>
+                  ))}
+                </Form.Select>
+              </Col>
+            </Row>
+          </Card.Footer>
+        )}
       </Card>
     </div>
   )
