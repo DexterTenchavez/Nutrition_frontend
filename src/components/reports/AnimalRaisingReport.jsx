@@ -1,0 +1,285 @@
+import { useState, useEffect } from 'react'
+import { useAuth } from '../../hooks/useAuth'
+import { animalRaisingApi } from '../../api/reports'
+import { BARANGAYS } from '../../utils/constants'
+import { Card, Form, Button, Alert, Table, Row, Col, Spinner } from 'react-bootstrap'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
+import nutritionLogo from '../../assets/nutritionlogo.jpg'
+
+const AnimalRaisingReport = () => {
+  const { user } = useAuth()
+  const [barangay, setBarangay] = useState('')
+  const [year, setYear] = useState(new Date().getFullYear())
+  const [records, setRecords] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [report, setReport] = useState(null)
+
+  useEffect(() => {
+    if (barangay) {
+      fetchRecords()
+    }
+  }, [barangay, year])
+
+  const fetchRecords = async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const data = await animalRaisingApi.getByBarangay(barangay, year)
+      setRecords(data)
+      generateReport(data)
+    } catch (error) {
+      setError('Error fetching records')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const generateReport = (data) => {
+    const purokReports = []
+    for (let p = 1; p <= 7; p++) {
+      const purokRecords = data.filter(r => r.purok === p)
+      purokReports.push({
+        purok: p,
+        households: purokRecords.length,
+        chickenMale: purokRecords.reduce((sum, r) => sum + (r.chickenMale || 0), 0),
+        chickenFemale: purokRecords.reduce((sum, r) => sum + (r.chickenFemale || 0), 0),
+        pigMale: purokRecords.reduce((sum, r) => sum + (r.pigMale || 0), 0),
+        pigFemale: purokRecords.reduce((sum, r) => sum + (r.pigFemale || 0), 0),
+        goatMale: purokRecords.reduce((sum, r) => sum + (r.goatMale || 0), 0),
+        goatFemale: purokRecords.reduce((sum, r) => sum + (r.goatFemale || 0), 0),
+        cowMale: purokRecords.reduce((sum, r) => sum + (r.cowMale || 0), 0),
+        cowFemale: purokRecords.reduce((sum, r) => sum + (r.cowFemale || 0), 0),
+        carabaoMale: purokRecords.reduce((sum, r) => sum + (r.carabaoMale || 0), 0),
+        carabaoFemale: purokRecords.reduce((sum, r) => sum + (r.carabaoFemale || 0), 0)
+      })
+    }
+    const total = {
+      households: purokReports.reduce((sum, p) => sum + p.households, 0),
+      chickenMale: purokReports.reduce((sum, p) => sum + p.chickenMale, 0),
+      chickenFemale: purokReports.reduce((sum, p) => sum + p.chickenFemale, 0),
+      pigMale: purokReports.reduce((sum, p) => sum + p.pigMale, 0),
+      pigFemale: purokReports.reduce((sum, p) => sum + p.pigFemale, 0),
+      goatMale: purokReports.reduce((sum, p) => sum + p.goatMale, 0),
+      goatFemale: purokReports.reduce((sum, p) => sum + p.goatFemale, 0),
+      cowMale: purokReports.reduce((sum, p) => sum + p.cowMale, 0),
+      cowFemale: purokReports.reduce((sum, p) => sum + p.cowFemale, 0),
+      carabaoMale: purokReports.reduce((sum, p) => sum + p.carabaoMale, 0),
+      carabaoFemale: purokReports.reduce((sum, p) => sum + p.carabaoFemale, 0)
+    }
+    setReport({ purokReports, total, barangay, year })
+  }
+
+  const handleExportPDF = () => {
+    if (!report) return
+
+    const doc = new jsPDF()
+    const pageWidth = doc.internal.pageSize.getWidth()
+    const barangayName = barangay.toUpperCase()
+
+    const logoImg = new Image()
+    logoImg.src = nutritionLogo
+    doc.addImage(logoImg, 'JPEG', 14, 8, 22, 22)
+
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(14)
+    doc.text('CONSOLIDATED REPORT ON', pageWidth / 2, 18, { align: 'center' })
+    doc.text(`HOUSEHOLD ANIMAL RAISING ${report.year}`, pageWidth / 2, 26, { align: 'center' })
+
+    doc.setFontSize(11)
+    doc.text(`BARANGAY: ${barangayName}`, 14, 38)
+    doc.text(`TOTAL HOUSEHOLD: ${report.total.households}`, 14, 46)
+
+    const body = report.purokReports.map((p) => [
+      p.purok,
+      p.chickenMale || '', p.chickenFemale || '',
+      p.pigMale || '', p.pigFemale || '',
+      p.goatMale || '', p.goatFemale || '',
+      p.cowMale || '', p.cowFemale || '',
+      p.carabaoMale || '', p.carabaoFemale || '',
+      ''
+    ])
+
+    body.push([
+      'TOTAL',
+      report.total.chickenMale || '', report.total.chickenFemale || '',
+      report.total.pigMale || '', report.total.pigFemale || '',
+      report.total.goatMale || '', report.total.goatFemale || '',
+      report.total.cowMale || '', report.total.cowFemale || '',
+      report.total.carabaoMale || '', report.total.carabaoFemale || '',
+      ''
+    ])
+
+    autoTable(doc, {
+      startY: 50,
+      head: [['PUROK', 'Chicken', '', 'Pig', '', 'Goat', '', 'Cow', '', 'Carabao', '', 'Signature']],
+      head: [['PUROK', 'Chicken M', 'Chicken F', 'Pig M', 'Pig F', 'Goat M', 'Goat F', 'Cow M', 'Cow F', 'Carabao M', 'Carabao F', 'Signature']],
+      body,
+      theme: 'grid',
+      styles: { halign: 'center', fontSize: 8, cellPadding: 3 },
+      headStyles: { fillColor: [255, 255, 255], textColor: 0, fontStyle: 'bold', lineWidth: 0.3 },
+      bodyStyles: { lineWidth: 0.3 },
+      columnStyles: { 0: { halign: 'center', fontStyle: 'bold' } }
+    })
+
+    const finalY = doc.lastAutoTable.finalY + 25
+
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'bold')
+    doc.text('CERTIFIED CORRECT:', 14, finalY)
+    doc.setFont('helvetica', 'normal')
+    doc.text('________________', 60, finalY)
+    doc.text('BNS', 65, finalY + 6)
+
+    doc.setFont('helvetica', 'bold')
+    doc.text('APPROVED BY:', pageWidth - 80, finalY)
+    doc.setFont('helvetica', 'normal')
+    doc.text('________________', pageWidth - 45, finalY)
+    doc.text('BRGY. CAPTAIN', pageWidth - 45, finalY + 6)
+
+    doc.save(`Animal_Raising_Report_${barangayName}_${report.year}.pdf`)
+  }
+
+  return (
+    <div>
+      <h4 className="mb-4">Animal Raising Report</h4>
+
+      <Card className="mb-4">
+        <Card.Body>
+          <Row>
+            <Col md={6}>
+              <Form.Group>
+                <Form.Label>Select Barangay</Form.Label>
+                <Form.Select value={barangay} onChange={(e) => setBarangay(e.target.value)}>
+                  <option value="">-- Select a Barangay --</option>
+                  {BARANGAYS.map((b) => (
+                    <option key={b} value={b}>{b}</option>
+                  ))}
+                </Form.Select>
+              </Form.Group>
+            </Col>
+            <Col md={6}>
+              <Form.Group>
+                <Form.Label>Year</Form.Label>
+                <Form.Select value={year} onChange={(e) => setYear(parseInt(e.target.value))}>
+                  {[2023, 2024, 2025, 2026].map((y) => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </Form.Select>
+              </Form.Group>
+            </Col>
+          </Row>
+        </Card.Body>
+      </Card>
+
+      {loading && (
+        <div className="text-center py-5">
+          <Spinner animation="border" variant="primary" />
+          <p className="mt-2">Loading records...</p>
+        </div>
+      )}
+
+      {!loading && error && <Alert variant="danger">{error}</Alert>}
+
+      {!loading && !error && report && barangay && (
+        <Card className="border-0 shadow-sm">
+          <Card.Body>
+            <div className="d-flex justify-content-between align-items-center mb-3">
+              <div className="d-flex align-items-center gap-2">
+                <img 
+                  src={nutritionLogo} 
+                  alt="Nutrition Logo" 
+                  style={{ 
+                    width: '40px', 
+                    height: '40px', 
+                    objectFit: 'cover',
+                    borderRadius: '50%',
+                    border: '2px solid #198754'
+                  }} 
+                />
+                <span className="text-muted">Animal Raising Report</span>
+              </div>
+              <Button variant="success" onClick={handleExportPDF}>
+                <i className="bi bi-file-pdf-fill me-2"></i>Export PDF
+              </Button>
+            </div>
+
+            <div className="text-center mb-4">
+              <h5 className="text-uppercase fw-bold mb-1">
+                CONSOLIDATED REPORT ON HOUSEHOLD ANIMAL RAISING {report.year}
+              </h5>
+              <p className="mb-0"><strong>BARANGAY:</strong> {barangay.toUpperCase()} <strong>TOTAL HOUSEHOLD:</strong> {report.total.households}</p>
+            </div>
+
+            <Table bordered className="mb-4" size="sm">
+              <thead>
+                <tr className="text-center">
+                  <th rowSpan="2">PUROK</th>
+                  <th colSpan="2">Chicken</th>
+                  <th colSpan="2">Pig</th>
+                  <th colSpan="2">Goat</th>
+                  <th colSpan="2">Cow</th>
+                  <th colSpan="2">Carabao</th>
+                  <th rowSpan="2">Signature</th>
+                </tr>
+                <tr className="text-center">
+                  <th>M</th><th>F</th>
+                  <th>M</th><th>F</th>
+                  <th>M</th><th>F</th>
+                  <th>M</th><th>F</th>
+                  <th>M</th><th>F</th>
+                </tr>
+              </thead>
+              <tbody>
+                {report.purokReports.map((p) => (
+                  <tr key={p.purok}>
+                    <td>{p.purok}</td>
+                    <td>{p.chickenMale || 0}</td>
+                    <td>{p.chickenFemale || 0}</td>
+                    <td>{p.pigMale || 0}</td>
+                    <td>{p.pigFemale || 0}</td>
+                    <td>{p.goatMale || 0}</td>
+                    <td>{p.goatFemale || 0}</td>
+                    <td>{p.cowMale || 0}</td>
+                    <td>{p.cowFemale || 0}</td>
+                    <td>{p.carabaoMale || 0}</td>
+                    <td>{p.carabaoFemale || 0}</td>
+                    <td></td>
+                  </tr>
+                ))}
+                <tr className="fw-bold">
+                  <td>TOTAL</td>
+                  <td>{report.total.chickenMale || 0}</td>
+                  <td>{report.total.chickenFemale || 0}</td>
+                  <td>{report.total.pigMale || 0}</td>
+                  <td>{report.total.pigFemale || 0}</td>
+                  <td>{report.total.goatMale || 0}</td>
+                  <td>{report.total.goatFemale || 0}</td>
+                  <td>{report.total.cowMale || 0}</td>
+                  <td>{report.total.cowFemale || 0}</td>
+                  <td>{report.total.carabaoMale || 0}</td>
+                  <td>{report.total.carabaoFemale || 0}</td>
+                  <td></td>
+                </tr>
+              </tbody>
+            </Table>
+
+            <div className="row mt-3">
+              <div className="col-6">
+                <strong>CERTIFIED CORRECT:</strong> ________________<br />
+                <span className="ms-4">BNS</span>
+              </div>
+              <div className="col-6 text-end">
+                <strong>APPROVED BY:</strong> ________________<br />
+                <span className="me-4">BRGY. CAPTAIN</span>
+              </div>
+            </div>
+          </Card.Body>
+        </Card>
+      )}
+    </div>
+  )
+}
+
+export default AnimalRaisingReport

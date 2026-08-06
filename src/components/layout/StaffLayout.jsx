@@ -4,7 +4,7 @@ import { Nav, Offcanvas, Button, OverlayTrigger, Tooltip } from 'react-bootstrap
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { List, ChevronLeft, ChevronRight } from 'react-bootstrap-icons'
-import './StaffLayout.css'
+import './css/StaffLayout.css'
 
 const StaffLayout = () => {
   const location = useLocation()

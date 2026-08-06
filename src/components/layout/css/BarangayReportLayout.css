@@ -1,0 +1,245 @@
+/* Barangay Report Layout - Matching Staff Layout */
+.barangay-report-layout {
+  min-height: 100vh;
+  background: #f8f9fa;
+}
+
+.barangay-report-layout .layout-body {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* Sidebar Styles */
+.barangay-report-layout .sidebar-wrapper {
+  width: 250px;
+  background: #ffffff;
+  border-right: 1px solid #e9ecef;
+  min-height: 100vh;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  transition: width 0.3s ease;
+  flex-shrink: 0;
+}
+
+.barangay-report-layout .sidebar-wrapper.collapsed {
+  width: 65px;
+}
+
+.barangay-report-layout .sidebar {
+  padding: 20px 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Sidebar Header */
+.barangay-report-sidebar .sidebar-header {
+  padding: 0 16px 16px;
+  border-bottom: 1px solid #e9ecef;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 60px;
+}
+
+.barangay-report-sidebar .sidebar-header .sidebar-logo {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 2px solid #198754;
+  flex-shrink: 0;
+}
+
+.barangay-report-sidebar .sidebar-header .sidebar-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #0B4F4A;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.barangay-report-sidebar .sidebar-header .sidebar-title-collapsed {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0B4F4A;
+  margin: 0;
+  text-align: center;
+  width: 100%;
+}
+
+/* Collapse Toggle Button */
+.barangay-report-sidebar .collapse-toggle-btn {
+  background: transparent;
+  border: none;
+  color: #6c757d;
+  cursor: pointer;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  width: 100%;
+  transition: color 0.2s;
+}
+
+.barangay-report-sidebar .collapse-toggle-btn:hover {
+  color: #0B4F4A;
+}
+
+.barangay-report-layout .sidebar-wrapper.collapsed .collapse-toggle-btn {
+  justify-content: center;
+  padding: 8px 0;
+}
+
+/* Sidebar Navigation */
+.barangay-report-sidebar .sidebar-nav {
+  flex: 1;
+  padding: 8px 0;
+}
+
+.barangay-report-sidebar .sidebar-section {
+  margin-bottom: 4px;
+}
+
+.barangay-report-sidebar .section-title {
+  padding: 8px 16px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #6c757d;
+  letter-spacing: 0.5px;
+}
+
+.barangay-report-sidebar .sidebar-link {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  color: #495057;
+  text-decoration: none;
+  transition: all 0.2s;
+  border-radius: 0;
+  font-size: 14px;
+  gap: 12px;
+  border-left: 3px solid transparent;
+}
+
+.barangay-report-sidebar .sidebar-link:hover {
+  background: #f0f8f5;
+  color: #0B4F4A;
+}
+
+.barangay-report-sidebar .sidebar-link.active {
+  background: #e8f5ee;
+  color: #0B4F4A;
+  font-weight: 600;
+  border-left-color: #198754;
+}
+
+.barangay-report-sidebar .sidebar-link .sidebar-icon {
+  font-size: 18px;
+  min-width: 24px;
+  color: #6c757d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.barangay-report-sidebar .sidebar-link.active .sidebar-icon {
+  color: #198754;
+}
+
+.barangay-report-sidebar .sidebar-link:hover .sidebar-icon {
+  color: #0B4F4A;
+}
+
+.barangay-report-sidebar .sidebar-link .sidebar-label {
+  white-space: nowrap;
+}
+
+/* Collapsed sidebar styles */
+.barangay-report-layout .sidebar-wrapper.collapsed .sidebar-link {
+  padding: 12px 16px;
+  justify-content: center;
+}
+
+.barangay-report-layout .sidebar-wrapper.collapsed .sidebar-link .sidebar-label {
+  display: none;
+}
+
+.barangay-report-layout .sidebar-wrapper.collapsed .sidebar-link .sidebar-icon {
+  font-size: 20px;
+  min-width: 0;
+}
+
+.barangay-report-layout .sidebar-wrapper.collapsed .section-title {
+  display: none;
+}
+
+.barangay-report-layout .sidebar-wrapper.collapsed .sidebar-header {
+  justify-content: center;
+  padding: 12px 8px 16px;
+}
+
+.barangay-report-layout .sidebar-wrapper.collapsed .sidebar-header .sidebar-logo {
+  width: 32px;
+  height: 32px;
+}
+
+/* Content Area */
+.barangay-report-layout .content-wrapper {
+  flex: 1;
+  padding: 20px 24px;
+  min-height: 100vh;
+  background: #f8f9fa;
+}
+
+.barangay-report-layout .content-area {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Scrollbar Styling */
+.barangay-report-layout .sidebar-wrapper::-webkit-scrollbar {
+  width: 4px;
+}
+
+.barangay-report-layout .sidebar-wrapper::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.barangay-report-layout .sidebar-wrapper::-webkit-scrollbar-thumb {
+  background: #c1c7cd;
+  border-radius: 4px;
+}
+
+.barangay-report-layout .sidebar-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #a8b0b8;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .barangay-report-layout .sidebar-wrapper {
+    width: 220px;
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 1000;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    height: 100vh;
+  }
+
+  .barangay-report-layout .sidebar-wrapper.open {
+    transform: translateX(0);
+  }
+
+  .barangay-report-layout .content-wrapper {
+    padding: 12px 16px;
+  }
+
+  .barangay-report-layout .sidebar-wrapper.collapsed {
+    width: 220px;
+  }
+}

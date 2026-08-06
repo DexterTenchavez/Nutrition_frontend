@@ -4,10 +4,12 @@ import Navbar from './components/common/Navbar'
 import ProtectedRoute from './components/common/ProtectedRoute'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
-import Reports from './pages/Reports'
+
+import BarangayReportLayout from './components/layout/BarangayReportLayout'
+
 import OverallReport from './pages/OverallReport'
-import BarangayReport from './pages/BarangayReport'
 import AdminStaff from './pages/AdminStaff'
+
 import StaffLayout from './components/layout/StaffLayout'
 import ChildRecordsEntry from './components/staff/ChildRecordsEntry'
 import AnimalRaisingEntry from './components/staff/AnimalRaisingEntry'
@@ -18,6 +20,18 @@ import BackyardGardeningEntry from './components/staff/BackyardGardeningEntry'
 import PregnantWomenEntry from './components/staff/PregnantWomenEntry'
 import VegetableSeedEntry from './components/staff/VegetableSeedEntry'
 import AnimalDispersalEntry from './components/staff/AnimalDispersalEntry'
+
+import Placeholder from './components/common/Placeholder'
+
+import ChildRecordsReport from './components/reports/ChildRecordsReport'
+import AnimalRaisingReport from './components/reports/AnimalRaisingReport'
+import PotableWaterReport from './components/reports/PotableWaterReport'
+import IodizedSaltReport from './components/reports/IodizedSaltReport'
+import CRReport from './components/reports/CRReport'
+import BackyardGardeningReport from './components/reports/BackyardGardeningReport'
+import PregnantWomenReport from './components/reports/PregnantWomenReport'
+import VegetableSeedReport from './components/reports/VegetableSeedReport'
+import AnimalDispersalReport from './components/reports/AnimalDispersalReport'
 
 function App() {
   const { user, loading } = useAuth()
@@ -49,10 +63,20 @@ function App() {
                 </ProtectedRoute>
               } />
               <Route path="/barangay-report" element={
-                <ProtectedRoute>
-                  <BarangayReport />
+                <ProtectedRoute adminOnly>
+                  <BarangayReportLayout />
                 </ProtectedRoute>
-              } />
+              }>
+                <Route index element={<ChildRecordsReport />} />
+                <Route path="pregnant-women" element={<PregnantWomenReport />} />
+                <Route path="animal-raising" element={<AnimalRaisingReport />} />
+                <Route path="animal-dispersal" element={<AnimalDispersalReport />} />
+                <Route path="backyard-gardening" element={<BackyardGardeningReport />} />
+                <Route path="vegetable-seeds" element={<VegetableSeedReport />} />
+                <Route path="potable-water" element={<PotableWaterReport />} />
+                <Route path="iodized-salt" element={<IodizedSaltReport />} />
+                <Route path="cr" element={<CRReport />} />
+              </Route>
               <Route path="/overall-report" element={
                 <ProtectedRoute adminOnly>
                   <OverallReport />
