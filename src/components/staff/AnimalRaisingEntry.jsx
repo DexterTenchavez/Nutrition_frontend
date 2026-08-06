@@ -7,6 +7,7 @@ import { FaSearch, FaTimes, FaFilter } from 'react-icons/fa'
 
 const AnimalRaisingEntry = () => {
   const { user } = useAuth()
+  const isAdmin = user?.role === 'admin'
   const [formData, setFormData] = useState({
     barangay: user?.barangay || '',
     purok: '',
@@ -56,8 +57,8 @@ const AnimalRaisingEntry = () => {
 
   const fetchRecords = async () => {
     try {
-      const year = new Date(selectedDate).getFullYear()
-      const data = await animalRaisingApi.getByBarangay(selectedBarangay, year)
+      // Fetch all records regardless of year (year = 0 means all)
+      const data = await animalRaisingApi.getByBarangay(selectedBarangay, 0)
       setRecords(data)
       setFilteredRecords(data)
     } catch (error) {
@@ -293,6 +294,7 @@ const AnimalRaisingEntry = () => {
             <Form.Select
               value={selectedBarangay}
               onChange={(e) => setSelectedBarangay(e.target.value)}
+              disabled={!isAdmin}
             >
               <option value="">Select Barangay</option>
               {BARANGAYS.map((b) => (

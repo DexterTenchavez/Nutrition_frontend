@@ -7,6 +7,7 @@ import { FaSearch, FaTimes, FaFilter } from 'react-icons/fa'
 
 const VegetableSeedEntry = () => {
   const { user } = useAuth()
+  const isAdmin = user?.role === 'admin'
   const [formData, setFormData] = useState({
     barangay: user?.barangay || '',
     purok: '',
@@ -36,7 +37,6 @@ const VegetableSeedEntry = () => {
   })
   const [showFilters, setShowFilters] = useState(false)
 
-  // Fetch when barangay, date, or refresh trigger changes
   useEffect(() => {
     if (selectedBarangay) {
       fetchRecords()
@@ -49,8 +49,7 @@ const VegetableSeedEntry = () => {
 
   const fetchRecords = async () => {
     try {
-      const year = new Date(selectedDate).getFullYear()
-      const data = await vegetableSeedApi.getByBarangay(selectedBarangay, year)
+      const data = await vegetableSeedApi.getByBarangay(selectedBarangay, 0)
       setRecords(data)
       setFilteredRecords(data)
     } catch (error) {
@@ -76,7 +75,6 @@ const VegetableSeedEntry = () => {
     setCurrentPage(1)
   }
 
-  // Add seed type row
   const addSeedType = () => {
     setFormData({
       ...formData,
@@ -84,7 +82,6 @@ const VegetableSeedEntry = () => {
     })
   }
 
-  // Remove seed type row - minimum 1
   const removeSeedType = (index) => {
     if (formData.seedTypes.length <= 1) return
     const updated = [...formData.seedTypes]
@@ -92,7 +89,6 @@ const VegetableSeedEntry = () => {
     setFormData({ ...formData, seedTypes: updated })
   }
 
-  // Update seed type
   const updateSeedType = (index, field, value) => {
     const updated = [...formData.seedTypes]
     if (field === 'count') {
@@ -103,33 +99,28 @@ const VegetableSeedEntry = () => {
     setFormData({ ...formData, seedTypes: updated })
   }
 
-  // Get current records for pagination
   const indexOfLastRecord = currentPage * recordsPerPage
   const indexOfFirstRecord = indexOfLastRecord - recordsPerPage
   const currentRecords = filteredRecords.slice(indexOfFirstRecord, indexOfLastRecord)
   const totalPages = Math.ceil(filteredRecords.length / recordsPerPage)
 
   const paginate = (pageNumber) => setCurrentPage(pageNumber)
-
   const nextPage = () => {
     if (currentPage < totalPages) {
       setCurrentPage(currentPage + 1)
     }
   }
-
   const prevPage = () => {
     if (currentPage > 1) {
       setCurrentPage(currentPage - 1)
     }
   }
-
   const handlePageSizeChange = (e) => {
     const newSize = parseInt(e.target.value)
     setRecordsPerPage(newSize)
     setCurrentPage(1)
   }
 
-  // Force refresh function
   const refreshData = () => {
     setRefreshTrigger(prev => prev + 1)
   }
@@ -145,7 +136,8 @@ const VegetableSeedEntry = () => {
       const filledSeedTypes = formData.seedTypes.filter(st => st.type.trim() !== '')
       const seedTypesJson = JSON.stringify(filledSeedTypes)
       
-      const year = new Date(selectedDate).getFullYear()
+      // USE formData.recordedDate, NOT selectedDate
+      const year = new Date(formData.recordedDate).getFullYear()
       
       const data = {
         barangay: formData.barangay,
@@ -153,9 +145,11 @@ const VegetableSeedEntry = () => {
         householdName: formData.householdName,
         seedTypes: seedTypesJson,
         year: year,
-        recordedDate: selectedDate,
+        recordedDate: formData.recordedDate, // ✅ Use formData.recordedDate
         recordedBy: formData.recordedBy || user?.username || ''
       }
+
+      console.log('Saving with date:', formData.recordedDate) // Debug log
 
       if (editingId) {
         await vegetableSeedApi.update(editingId, data)
@@ -165,7 +159,6 @@ const VegetableSeedEntry = () => {
         setSuccess('Record saved successfully!')
       }
 
-      // Reset form
       setFormData({
         barangay: user?.barangay || '',
         purok: '',
@@ -175,12 +168,7 @@ const VegetableSeedEntry = () => {
         recordedBy: user?.username || ''
       })
       setEditingId(null)
-      
-      // Auto refresh after saving (no manual refresh needed)
-      setTimeout(() => {
-        refreshData()
-      }, 300)
-
+      setTimeout(() => refreshData(), 300)
     } catch (error) {
       console.error('Error:', error.response?.data)
       const errorMsg = error.response?.data?.message || error.message || 'Error saving record'
@@ -201,7 +189,6 @@ const VegetableSeedEntry = () => {
           seedTypes = parsed
         }
       } catch (e) {
-        console.error('Error parsing seed types:', e)
         seedTypes = [{ type: '', count: 0 }]
       }
     }
@@ -223,10 +210,7 @@ const VegetableSeedEntry = () => {
     try {
       await vegetableSeedApi.delete(id)
       setSuccess('Record deleted successfully!')
-      // Auto refresh after delete
-      setTimeout(() => {
-        refreshData()
-      }, 300)
+      setTimeout(() => refreshData(), 300)
     } catch (error) {
       alert('Error deleting record')
     }
@@ -326,22 +310,13 @@ const VegetableSeedEntry = () => {
             <Form.Select
               value={selectedBarangay}
               onChange={(e) => setSelectedBarangay(e.target.value)}
+              disabled={!isAdmin}
             >
               <option value="">Select Barangay</option>
               {BARANGAYS.map((b) => (
                 <option key={b} value={b}>{b}</option>
               ))}
             </Form.Select>
-          </Form.Group>
-        </Col>
-        <Col md={4}>
-          <Form.Group>
-            <Form.Label>Record Date</Form.Label>
-            <Form.Control
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-            />
           </Form.Group>
         </Col>
       </Row>
@@ -380,6 +355,24 @@ const VegetableSeedEntry = () => {
                     onChange={(e) => setFormData({ ...formData, householdName: e.target.value })}
                     required
                     placeholder="Enter household name"
+                  />
+                </Form.Group>
+              </Col>
+            </Row>
+
+            {/* Record Date Field - INSIDE the form */}
+            <Row>
+              <Col md={4}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Record Date</Form.Label>
+                  <Form.Control
+                    type="date"
+                    value={formData.recordedDate}
+                    onChange={(e) => {
+                      console.log('Date selected:', e.target.value) // Debug log
+                      setFormData({ ...formData, recordedDate: e.target.value })
+                    }}
+                    required
                   />
                 </Form.Group>
               </Col>

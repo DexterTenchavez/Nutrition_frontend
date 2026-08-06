@@ -10,25 +10,69 @@ import nutritionLogo from '../../assets/nutritionlogo.jpg'
 const VegetableSeedReport = () => {
   const { user } = useAuth()
   const [barangay, setBarangay] = useState('')
-  const [year, setYear] = useState(new Date().getFullYear())
+  const [startDate, setStartDate] = useState(new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0])
+  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0])
   const [records, setRecords] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [report, setReport] = useState(null)
+  
+  // Filter states for the 3 seed type columns
+  const [selectedSeed1, setSelectedSeed1] = useState('')
+  const [selectedSeed2, setSelectedSeed2] = useState('')
+  const [selectedSeed3, setSelectedSeed3] = useState('')
+
+  // Get all unique seed types from records
+  const getAllSeedTypes = () => {
+    const seedSet = new Set()
+    records.forEach(record => {
+      if (record.seedTypes) {
+        try {
+          const seeds = typeof record.seedTypes === 'string' ? JSON.parse(record.seedTypes) : record.seedTypes
+          seeds.forEach(s => {
+            if (s.type) seedSet.add(s.type)
+          })
+        } catch (e) {}
+      }
+    })
+    return Array.from(seedSet).sort()
+  }
+
+  const seedOptions = getAllSeedTypes()
 
   useEffect(() => {
     if (barangay) {
       fetchRecords()
     }
-  }, [barangay, year])
+  }, [barangay, startDate, endDate])
+
+  useEffect(() => {
+    if (records.length > 0) {
+      // Auto-select first 3 seed types if available
+      const allSeeds = getAllSeedTypes()
+      if (allSeeds.length > 0 && !selectedSeed1) setSelectedSeed1(allSeeds[0])
+      if (allSeeds.length > 1 && !selectedSeed2) setSelectedSeed2(allSeeds[1])
+      if (allSeeds.length > 2 && !selectedSeed3) setSelectedSeed3(allSeeds[2])
+    }
+  }, [records])
 
   const fetchRecords = async () => {
     setLoading(true)
     setError('')
     try {
-      const data = await vegetableSeedApi.getByBarangay(barangay, year)
-      setRecords(data)
-      generateReport(data)
+      const data = await vegetableSeedApi.getByBarangay(barangay, 0)
+      
+      const filtered = data.filter(r => {
+        const recordDate = new Date(r.recordedDate)
+        const start = new Date(startDate)
+        const end = new Date(endDate)
+        start.setHours(0, 0, 0, 0)
+        end.setHours(23, 59, 59, 999)
+        return recordDate >= start && recordDate <= end
+      })
+      
+      setRecords(filtered)
+      generateReport(filtered)
     } catch (error) {
       setError('Error fetching records')
     } finally {
@@ -41,34 +85,68 @@ const VegetableSeedReport = () => {
     for (let p = 1; p <= 7; p++) {
       const purokRecords = data.filter(r => r.purok === p)
       let poorFamiliesCount = 0
-      const seedTypes = {}
+      const seedCounts = {}
+      
       purokRecords.forEach(r => {
         poorFamiliesCount += 1
         if (r.seedTypes) {
           try {
             const seeds = typeof r.seedTypes === 'string' ? JSON.parse(r.seedTypes) : r.seedTypes
             seeds.forEach(s => {
-              if (!seedTypes[s.type]) seedTypes[s.type] = 0
-              seedTypes[s.type] += s.count
+              if (!seedCounts[s.type]) seedCounts[s.type] = 0
+              seedCounts[s.type] += s.count
             })
           } catch (e) {}
         }
       })
-      const seedEntries = Object.entries(seedTypes)
-      const subTotal = seedEntries.reduce((sum, [_, count]) => sum + count, 0)
+      
+      // Get counts for selected seed types
+      const count1 = selectedSeed1 ? (seedCounts[selectedSeed1] || 0) : 0
+      const count2 = selectedSeed2 ? (seedCounts[selectedSeed2] || 0) : 0
+      const count3 = selectedSeed3 ? (seedCounts[selectedSeed3] || 0) : 0
+      const subTotal = count1 + count2 + count3
+      
       purokReports.push({
         purok: p,
         poorFamilies: poorFamiliesCount,
-        seedTypes: seedEntries,
-        subTotal: subTotal
+        count1: count1,
+        count2: count2,
+        count3: count3,
+        subTotal: subTotal,
+        seedTypes: seedCounts
       })
     }
+    
     const total = {
       poorFamilies: purokReports.reduce((sum, p) => sum + p.poorFamilies, 0),
+      count1: purokReports.reduce((sum, p) => sum + p.count1, 0),
+      count2: purokReports.reduce((sum, p) => sum + p.count2, 0),
+      count3: purokReports.reduce((sum, p) => sum + p.count3, 0),
       subTotal: purokReports.reduce((sum, p) => sum + p.subTotal, 0)
     }
-    setReport({ purokReports, total, barangay, year })
+    
+    const startYear = new Date(startDate).getFullYear()
+    const endYear = new Date(endDate).getFullYear()
+    const yearDisplay = startYear === endYear ? startYear.toString() : `${startYear}-${endYear}`
+    setReport({ 
+      purokReports, 
+      total, 
+      barangay, 
+      year: yearDisplay, 
+      startDate, 
+      endDate,
+      selectedSeed1,
+      selectedSeed2,
+      selectedSeed3
+    })
   }
+
+  // Re-generate report when seed selections change
+  useEffect(() => {
+    if (records.length > 0) {
+      generateReport(records)
+    }
+  }, [selectedSeed1, selectedSeed2, selectedSeed3])
 
   const handleExportPDF = () => {
     if (!report) return
@@ -88,33 +166,43 @@ const VegetableSeedReport = () => {
 
     doc.setFontSize(11)
     doc.text(`BARANGAY: ${barangayName}`, 14, 38)
+    doc.text(`DATE: ${new Date(report.startDate).toLocaleDateString()} - ${new Date(report.endDate).toLocaleDateString()}`, 14, 46)
 
-    const body = report.purokReports.map((p) => {
-      const seedDisplay = p.seedTypes.map(([type, count]) => `${type}(${count})`).join(', ') || 'None'
-      return [
-        p.purok,
-        p.poorFamilies || 0,
-        seedDisplay,
-        p.subTotal || 0
-      ]
-    })
+    const body = report.purokReports.map((p) => [
+      p.purok,
+      p.poorFamilies || 0,
+      p.count1 || 0,
+      p.count2 || 0,
+      p.count3 || 0,
+      p.subTotal || 0
+    ])
 
     body.push([
       'TOTAL',
       report.total.poorFamilies || 0,
-      '',
+      report.total.count1 || 0,
+      report.total.count2 || 0,
+      report.total.count3 || 0,
       report.total.subTotal || 0
     ])
 
+    const headers = [
+      ['PUROK', 'NO. OF POOR FAMILIES', 
+       `NO. OF ${report.selectedSeed1 || '______'}`, 
+       `NO. OF ${report.selectedSeed2 || '______'}`, 
+       `NO. OF ${report.selectedSeed3 || '______'}`, 
+       'SUB-TOTAL']
+    ]
+
     autoTable(doc, {
-      startY: 44,
-      head: [['PUROK', 'NO. OF POOR FAMILIES', 'SEEDLINGS GIVEN', 'SUB-TOTAL']],
+      startY: 52,
+      head: headers,
       body,
       theme: 'grid',
       styles: { halign: 'center', fontSize: 9, cellPadding: 4 },
       headStyles: { fillColor: [255, 255, 255], textColor: 0, fontStyle: 'bold', lineWidth: 0.3 },
       bodyStyles: { lineWidth: 0.3 },
-      columnStyles: { 0: { halign: 'center', fontStyle: 'bold' }, 2: { halign: 'left' } }
+      columnStyles: { 0: { halign: 'center', fontStyle: 'bold' } }
     })
 
     const finalY = doc.lastAutoTable.finalY + 25
@@ -142,7 +230,7 @@ const VegetableSeedReport = () => {
       <Card className="mb-4">
         <Card.Body>
           <Row>
-            <Col md={6}>
+            <Col md={4}>
               <Form.Group>
                 <Form.Label>Select Barangay</Form.Label>
                 <Form.Select value={barangay} onChange={(e) => setBarangay(e.target.value)}>
@@ -153,12 +241,67 @@ const VegetableSeedReport = () => {
                 </Form.Select>
               </Form.Group>
             </Col>
-            <Col md={6}>
+            <Col md={4}>
               <Form.Group>
-                <Form.Label>Year</Form.Label>
-                <Form.Select value={year} onChange={(e) => setYear(parseInt(e.target.value))}>
-                  {[2023, 2024, 2025, 2026].map((y) => (
-                    <option key={y} value={y}>{y}</option>
+                <Form.Label>Start Date</Form.Label>
+                <Form.Control
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
+              </Form.Group>
+            </Col>
+            <Col md={4}>
+              <Form.Group>
+                <Form.Label>End Date</Form.Label>
+                <Form.Control
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                />
+              </Form.Group>
+            </Col>
+          </Row>
+          
+          <Row className="mt-3">
+            <Col md={4}>
+              <Form.Group>
+                <Form.Label>Seed Type 1</Form.Label>
+                <Form.Select 
+                  value={selectedSeed1} 
+                  onChange={(e) => setSelectedSeed1(e.target.value)}
+                >
+                  <option value="">Select Seed Type</option>
+                  {seedOptions.map((seed) => (
+                    <option key={seed} value={seed}>{seed}</option>
+                  ))}
+                </Form.Select>
+              </Form.Group>
+            </Col>
+            <Col md={4}>
+              <Form.Group>
+                <Form.Label>Seed Type 2</Form.Label>
+                <Form.Select 
+                  value={selectedSeed2} 
+                  onChange={(e) => setSelectedSeed2(e.target.value)}
+                >
+                  <option value="">Select Seed Type</option>
+                  {seedOptions.map((seed) => (
+                    <option key={seed} value={seed}>{seed}</option>
+                  ))}
+                </Form.Select>
+              </Form.Group>
+            </Col>
+            <Col md={4}>
+              <Form.Group>
+                <Form.Label>Seed Type 3</Form.Label>
+                <Form.Select 
+                  value={selectedSeed3} 
+                  onChange={(e) => setSelectedSeed3(e.target.value)}
+                >
+                  <option value="">Select Seed Type</option>
+                  {seedOptions.map((seed) => (
+                    <option key={seed} value={seed}>{seed}</option>
                   ))}
                 </Form.Select>
               </Form.Group>
@@ -204,14 +347,17 @@ const VegetableSeedReport = () => {
                 CONSOLIDATED REPORT ON POOR FAMILIES GIVEN VEGETABLE SEEDS CY.{report.year}
               </h5>
               <p className="mb-0"><strong>BARANGAY:</strong> {barangay.toUpperCase()}</p>
+              <p className="mb-0"><strong>DATE:</strong> {new Date(report.startDate).toLocaleDateString()} - {new Date(report.endDate).toLocaleDateString()}</p>
             </div>
 
             <Table bordered className="mb-4">
               <thead>
                 <tr className="text-center">
-                  <th style={{ width: '10%' }}>PUROK</th>
-                  <th style={{ width: '20%' }}>NO. OF POOR FAMILIES</th>
-                  <th style={{ width: '50%' }}>SEEDLINGS GIVEN</th>
+                  <th style={{ width: '8%' }}>PUROK</th>
+                  <th style={{ width: '15%' }}>NO. OF POOR FAMILIES</th>
+                  <th style={{ width: '15%' }}>NO. OF {report.selectedSeed1 || '______'}</th>
+                  <th style={{ width: '15%' }}>NO. OF {report.selectedSeed2 || '______'}</th>
+                  <th style={{ width: '15%' }}>NO. OF {report.selectedSeed3 || '______'}</th>
                   <th style={{ width: '10%' }}>SUB-TOTAL</th>
                 </tr>
               </thead>
@@ -220,21 +366,18 @@ const VegetableSeedReport = () => {
                   <tr key={p.purok}>
                     <td>{p.purok}</td>
                     <td className="text-center">{p.poorFamilies || 0}</td>
-                    <td>
-                      {p.seedTypes.map(([type, count]) => (
-                        <span key={type} className="badge bg-info me-1">
-                          {type} ({count})
-                        </span>
-                      ))}
-                      {p.seedTypes.length === 0 && 'None'}
-                    </td>
+                    <td className="text-center">{p.count1 || 0}</td>
+                    <td className="text-center">{p.count2 || 0}</td>
+                    <td className="text-center">{p.count3 || 0}</td>
                     <td className="text-center">{p.subTotal || 0}</td>
                   </tr>
                 ))}
                 <tr className="fw-bold">
                   <td>TOTAL</td>
                   <td className="text-center">{report.total.poorFamilies || 0}</td>
-                  <td></td>
+                  <td className="text-center">{report.total.count1 || 0}</td>
+                  <td className="text-center">{report.total.count2 || 0}</td>
+                  <td className="text-center">{report.total.count3 || 0}</td>
                   <td className="text-center">{report.total.subTotal || 0}</td>
                 </tr>
               </tbody>

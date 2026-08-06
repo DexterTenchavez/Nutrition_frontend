@@ -10,7 +10,8 @@ import nutritionLogo from '../../assets/nutritionlogo.jpg'
 const BackyardGardeningReport = () => {
   const { user } = useAuth()
   const [barangay, setBarangay] = useState('')
-  const [year, setYear] = useState(new Date().getFullYear())
+  const [startDate, setStartDate] = useState(new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0])
+  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0])
   const [records, setRecords] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -20,15 +21,27 @@ const BackyardGardeningReport = () => {
     if (barangay) {
       fetchRecords()
     }
-  }, [barangay, year])
+  }, [barangay, startDate, endDate])
 
   const fetchRecords = async () => {
     setLoading(true)
     setError('')
     try {
-      const data = await backyardGardeningApi.getByBarangay(barangay, year)
-      setRecords(data)
-      generateReport(data)
+      // Fetch all records (year = 0 means all)
+      const data = await backyardGardeningApi.getByBarangay(barangay, 0)
+      
+      // Filter by date range
+      const filtered = data.filter(r => {
+        const recordDate = new Date(r.recordedDate)
+        const start = new Date(startDate)
+        const end = new Date(endDate)
+        start.setHours(0, 0, 0, 0)
+        end.setHours(23, 59, 59, 999)
+        return recordDate >= start && recordDate <= end
+      })
+      
+      setRecords(filtered)
+      generateReport(filtered)
     } catch (error) {
       setError('Error fetching records')
     } finally {
@@ -50,7 +63,10 @@ const BackyardGardeningReport = () => {
       withGarden: purokReports.reduce((sum, p) => sum + p.withGarden, 0),
       withoutGarden: purokReports.reduce((sum, p) => sum + p.withoutGarden, 0)
     }
-    setReport({ purokReports, total, barangay, year })
+    const startYear = new Date(startDate).getFullYear()
+    const endYear = new Date(endDate).getFullYear()
+    const yearDisplay = startYear === endYear ? startYear.toString() : `${startYear}-${endYear}`
+    setReport({ purokReports, total, barangay, year: yearDisplay, startDate, endDate })
   }
 
   const handleExportPDF = () => {
@@ -71,6 +87,7 @@ const BackyardGardeningReport = () => {
 
     doc.setFontSize(11)
     doc.text(`BARANGAY: ${barangayName}`, 14, 38)
+    doc.text(`DATE: ${new Date(report.startDate).toLocaleDateString()} - ${new Date(report.endDate).toLocaleDateString()}`, 14, 46)
 
     const body = report.purokReports.map((p) => [
       p.purok,
@@ -85,7 +102,7 @@ const BackyardGardeningReport = () => {
     ])
 
     autoTable(doc, {
-      startY: 44,
+      startY: 52,
       head: [['PUROK', 'WITH GARDEN', 'WITHOUT GARDEN']],
       body,
       theme: 'grid',
@@ -120,7 +137,7 @@ const BackyardGardeningReport = () => {
       <Card className="mb-4">
         <Card.Body>
           <Row>
-            <Col md={6}>
+            <Col md={4}>
               <Form.Group>
                 <Form.Label>Select Barangay</Form.Label>
                 <Form.Select value={barangay} onChange={(e) => setBarangay(e.target.value)}>
@@ -131,14 +148,24 @@ const BackyardGardeningReport = () => {
                 </Form.Select>
               </Form.Group>
             </Col>
-            <Col md={6}>
+            <Col md={4}>
               <Form.Group>
-                <Form.Label>Year</Form.Label>
-                <Form.Select value={year} onChange={(e) => setYear(parseInt(e.target.value))}>
-                  {[2023, 2024, 2025, 2026].map((y) => (
-                    <option key={y} value={y}>{y}</option>
-                  ))}
-                </Form.Select>
+                <Form.Label>Start Date</Form.Label>
+                <Form.Control
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
+              </Form.Group>
+            </Col>
+            <Col md={4}>
+              <Form.Group>
+                <Form.Label>End Date</Form.Label>
+                <Form.Control
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                />
               </Form.Group>
             </Col>
           </Row>
@@ -182,6 +209,7 @@ const BackyardGardeningReport = () => {
                 CONSOLIDATED REPORT ON WITH AND WITHOUT BACKYARD GARDENING CY:{report.year}
               </h5>
               <p className="mb-0"><strong>BARANGAY:</strong> {barangay.toUpperCase()}</p>
+              <p className="mb-0"><strong>DATE:</strong> {new Date(report.startDate).toLocaleDateString()} - {new Date(report.endDate).toLocaleDateString()}</p>
             </div>
 
             <Table bordered className="mb-4">

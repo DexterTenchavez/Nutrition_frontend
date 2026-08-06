@@ -27,17 +27,32 @@ const PregnantWomenReport = () => {
     setLoading(true)
     setError('')
     try {
-      const year = new Date(endDate).getFullYear()
-      const data = await pregnantWomenApi.getByBarangay(barangay, year)
+      // Fetch all records for the barangay
+      const data = await pregnantWomenApi.getByBarangay(barangay, 0)
+      
+      console.log('All records:', data) // Debug log
+      
+      // Filter by date range
+      const start = new Date(startDate)
+      const end = new Date(endDate)
+      start.setHours(0, 0, 0, 0)
+      end.setHours(23, 59, 59, 999)
+      
+      console.log('Start date:', start)
+      console.log('End date:', end)
       
       const filtered = data.filter(r => {
         const recordDate = new Date(r.recordedDate)
-        return recordDate >= new Date(startDate) && recordDate <= new Date(endDate)
+        console.log('Record date:', recordDate, 'Included:', recordDate >= start && recordDate <= end) // Debug log
+        return recordDate >= start && recordDate <= end
       })
+      
+      console.log('Filtered records:', filtered) // Debug log
       
       setRecords(filtered)
       generateReport(filtered)
     } catch (error) {
+      console.error('Error fetching records:', error)
       setError('Error fetching records')
     } finally {
       setLoading(false)
@@ -60,8 +75,10 @@ const PregnantWomenReport = () => {
       lowBMI: purokReports.reduce((sum, p) => sum + p.lowBMI, 0),
       normalBMI: purokReports.reduce((sum, p) => sum + p.normalBMI, 0)
     }
-    const year = new Date(endDate).getFullYear()
-    setReport({ purokReports, total, barangay, year, startDate, endDate })
+    const startYear = new Date(startDate).getFullYear()
+    const endYear = new Date(endDate).getFullYear()
+    const yearDisplay = startYear === endYear ? startYear.toString() : `${startYear}-${endYear}`
+    setReport({ purokReports, total, barangay, year: yearDisplay, startDate, endDate })
   }
 
   const handleExportPDF = () => {

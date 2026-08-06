@@ -7,6 +7,7 @@ import { FaSearch, FaTimes, FaFilter } from 'react-icons/fa'
 
 const BackyardGardeningEntry = () => {
   const { user } = useAuth()
+  const isAdmin = user?.role === 'admin'
   const [formData, setFormData] = useState({
     barangay: user?.barangay || '',
     purok: '',
@@ -48,8 +49,8 @@ const BackyardGardeningEntry = () => {
 
   const fetchRecords = async () => {
     try {
-      const year = new Date(selectedDate).getFullYear()
-      const data = await backyardGardeningApi.getByBarangay(selectedBarangay, year)
+      // Fetch all records regardless of year (year = 0 means all)
+      const data = await backyardGardeningApi.getByBarangay(selectedBarangay, 0)
       setRecords(data)
       setFilteredRecords(data)
     } catch (error) {
@@ -121,7 +122,7 @@ const BackyardGardeningEntry = () => {
     setLoading(true)
 
     try {
-      const year = new Date(selectedDate).getFullYear()
+      const year = new Date(formData.recordedDate).getFullYear()
       
       const data = {
         ...formData,
@@ -129,7 +130,7 @@ const BackyardGardeningEntry = () => {
         householdName: formData.householdName,
         hasGarden: formData.hasGarden,
         year: year,
-        recordedDate: selectedDate
+        recordedDate: formData.recordedDate
       }
 
       if (editingId) {
@@ -266,22 +267,13 @@ const BackyardGardeningEntry = () => {
             <Form.Select
               value={selectedBarangay}
               onChange={(e) => setSelectedBarangay(e.target.value)}
+              disabled={!isAdmin}
             >
               <option value="">Select Barangay</option>
               {BARANGAYS.map((b) => (
                 <option key={b} value={b}>{b}</option>
               ))}
             </Form.Select>
-          </Form.Group>
-        </Col>
-        <Col md={4}>
-          <Form.Group>
-            <Form.Label>Record Date</Form.Label>
-            <Form.Control
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-            />
           </Form.Group>
         </Col>
       </Row>
@@ -320,6 +312,20 @@ const BackyardGardeningEntry = () => {
                     onChange={(e) => setFormData({ ...formData, householdName: e.target.value })}
                     required
                     placeholder="Enter household name"
+                  />
+                </Form.Group>
+              </Col>
+            </Row>
+
+            <Row>
+              <Col md={4}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Record Date</Form.Label>
+                  <Form.Control
+                    type="date"
+                    value={formData.recordedDate}
+                    onChange={(e) => setFormData({ ...formData, recordedDate: e.target.value })}
+                    required
                   />
                 </Form.Group>
               </Col>

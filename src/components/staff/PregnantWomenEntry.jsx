@@ -39,6 +39,8 @@ const PregnantWomenEntry = () => {
   })
   const [showFilters, setShowFilters] = useState(false)
 
+  const isAdmin = user?.role === 'admin'
+
   useEffect(() => {
     if (selectedBarangay) {
       fetchRecords()
@@ -50,15 +52,15 @@ const PregnantWomenEntry = () => {
   }, [searchTerm, records, filters])
 
   const fetchRecords = async () => {
-    try {
-      const year = new Date(selectedDate).getFullYear()
-      const data = await pregnantWomenApi.getByBarangay(selectedBarangay, year)
-      setRecords(data)
-      setFilteredRecords(data)
-    } catch (error) {
-      console.error('Error fetching records:', error)
-    }
+  try {
+    // Use year 0 to get all records
+    const data = await pregnantWomenApi.getByBarangay(selectedBarangay, 0)
+    setRecords(data)
+    setFilteredRecords(data)
+  } catch (error) {
+    console.error('Error fetching records:', error)
   }
+}
 
   const applyFiltersAndSearch = () => {
     let filtered = [...records]
@@ -324,6 +326,7 @@ const PregnantWomenEntry = () => {
             <Form.Select
               value={selectedBarangay}
               onChange={(e) => setSelectedBarangay(e.target.value)}
+              disabled={!isAdmin}
             >
               <option value="">Select Barangay</option>
               {BARANGAYS.map((b) => (

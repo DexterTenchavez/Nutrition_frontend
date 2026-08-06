@@ -7,6 +7,7 @@ import { FaSearch, FaTimes, FaFilter } from 'react-icons/fa'
 
 const AnimalDispersalEntry = () => {
   const { user } = useAuth()
+  const isAdmin = user?.role === 'admin'
   const [formData, setFormData] = useState({
     barangay: user?.barangay || '',
     purok: '',
@@ -48,7 +49,7 @@ const AnimalDispersalEntry = () => {
     if (selectedBarangay) {
       fetchRecords()
     }
-  }, [selectedBarangay, selectedDate])
+  }, [selectedBarangay]) // <- Remove selectedDate dependency
 
   useEffect(() => {
     applyFiltersAndSearch()
@@ -56,8 +57,7 @@ const AnimalDispersalEntry = () => {
 
   const fetchRecords = async () => {
     try {
-      const year = new Date(selectedDate).getFullYear()
-      const data = await animalDispersalApi.getByBarangay(selectedBarangay, year)
+      const data = await animalDispersalApi.getByBarangay(selectedBarangay, 0)
       setRecords(data)
       setFilteredRecords(data)
     } catch (error) {
@@ -116,7 +116,8 @@ const AnimalDispersalEntry = () => {
     setLoading(true)
 
     try {
-      const year = new Date(selectedDate).getFullYear()
+      // Use the date from the form, NOT selectedDate
+      const year = new Date(formData.recordedDate).getFullYear()
       
       const data = {
         ...formData,
@@ -133,8 +134,10 @@ const AnimalDispersalEntry = () => {
         carabaoMale: parseInt(formData.carabaoMale) || 0,
         carabaoFemale: parseInt(formData.carabaoFemale) || 0,
         year: year,
-        recordedDate: selectedDate
+        recordedDate: formData.recordedDate // <- Use formData.recordedDate
       }
+
+      console.log('Saving with date:', formData.recordedDate) // Debug log
 
       if (editingId) {
         await animalDispersalApi.update(editingId, data)
@@ -288,22 +291,13 @@ const AnimalDispersalEntry = () => {
             <Form.Select
               value={selectedBarangay}
               onChange={(e) => setSelectedBarangay(e.target.value)}
+              disabled={!isAdmin}
             >
               <option value="">Select Barangay</option>
               {BARANGAYS.map((b) => (
                 <option key={b} value={b}>{b}</option>
               ))}
             </Form.Select>
-          </Form.Group>
-        </Col>
-        <Col md={4}>
-          <Form.Group>
-            <Form.Label>Record Date</Form.Label>
-            <Form.Control
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-            />
           </Form.Group>
         </Col>
       </Row>
@@ -342,6 +336,24 @@ const AnimalDispersalEntry = () => {
                     onChange={(e) => setFormData({ ...formData, householdName: e.target.value })}
                     required
                     placeholder="Enter household name"
+                  />
+                </Form.Group>
+              </Col>
+            </Row>
+
+            {/* Record Date Field - INSIDE the form */}
+            <Row>
+              <Col md={4}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Record Date</Form.Label>
+                  <Form.Control
+                    type="date"
+                    value={formData.recordedDate}
+                    onChange={(e) => {
+                      console.log('Date selected:', e.target.value) // Debug log
+                      setFormData({ ...formData, recordedDate: e.target.value })
+                    }}
+                    required
                   />
                 </Form.Group>
               </Col>
