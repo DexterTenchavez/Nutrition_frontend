@@ -78,6 +78,10 @@ const Login = () => {
 
             <h2 className="login-title">Welcome back</h2>
             <p className="login-subtitle">Nutrition Management Portal</p>
+            <p> mark@gmail.com</p>
+            <p> mark123</p>
+            <p> dextertenchavez@gmail.com</p>
+            <p> Jericho@453</p>
 
             {error && <Alert variant="danger">{error}</Alert>}
 

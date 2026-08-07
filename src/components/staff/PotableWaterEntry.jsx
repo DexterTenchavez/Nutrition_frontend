@@ -14,6 +14,7 @@ const PotableWaterEntry = () => {
     level1: '0',
     level2: '0',
     level3: '0',
+    recordedDate: new Date().toISOString().split('T')[0],
     recordedBy: user?.username || ''
   })
   const [records, setRecords] = useState([])
@@ -23,7 +24,6 @@ const PotableWaterEntry = () => {
   const [success, setSuccess] = useState('')
   const [editingId, setEditingId] = useState(null)
   const [selectedBarangay, setSelectedBarangay] = useState(user?.barangay || '')
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
@@ -40,20 +40,43 @@ const PotableWaterEntry = () => {
     if (selectedBarangay) {
       fetchRecords()
     }
-  }, [selectedBarangay, selectedDate])
+  }, [selectedBarangay])
 
   useEffect(() => {
     applyFiltersAndSearch()
   }, [searchTerm, records, filters])
 
   const fetchRecords = async () => {
+    setLoading(true)
     try {
-      const year = new Date(selectedDate).getFullYear()
-      const data = await potableWaterApi.getByBarangay(selectedBarangay, year)
+      // Try to fetch all records by using year 0
+      const data = await potableWaterApi.getByBarangay(selectedBarangay, 0)
       setRecords(data)
       setFilteredRecords(data)
     } catch (error) {
       console.error('Error fetching records:', error)
+      // If year 0 fails, try fetching records from multiple years
+      try {
+        const currentYear = new Date().getFullYear()
+        let allRecords = []
+        // Fetch from 2020 to current year
+        for (let year = 2020; year <= currentYear; year++) {
+          try {
+            const yearData = await potableWaterApi.getByBarangay(selectedBarangay, year)
+            allRecords = [...allRecords, ...yearData]
+          } catch (e) {
+            // Skip years with no data
+          }
+        }
+        setRecords(allRecords)
+        setFilteredRecords(allRecords)
+      } catch (e) {
+        console.error('Error fetching records by year:', e)
+        setRecords([])
+        setFilteredRecords([])
+      }
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -113,7 +136,8 @@ const PotableWaterEntry = () => {
     setLoading(true)
 
     try {
-      const year = new Date(selectedDate).getFullYear()
+      // Use formData.recordedDate for the year
+      const year = new Date(formData.recordedDate).getFullYear()
       
       const data = {
         ...formData,
@@ -123,7 +147,7 @@ const PotableWaterEntry = () => {
         level2: parseInt(formData.level2) || 0,
         level3: parseInt(formData.level3) || 0,
         year: year,
-        recordedDate: selectedDate
+        recordedDate: formData.recordedDate
       }
 
       if (editingId) {
@@ -134,6 +158,7 @@ const PotableWaterEntry = () => {
         setSuccess('Record saved successfully!')
       }
 
+      // Reset form
       setFormData({
         barangay: user?.barangay || '',
         purok: '',
@@ -141,10 +166,11 @@ const PotableWaterEntry = () => {
         level1: '0',
         level2: '0',
         level3: '0',
+        recordedDate: new Date().toISOString().split('T')[0],
         recordedBy: user?.username || ''
       })
       setEditingId(null)
-      fetchRecords()
+      fetchRecords() // Refresh the list
     } catch (error) {
       const errorMsg = error.response?.data?.message || error.message || 'Error saving record'
       setError(errorMsg)
@@ -163,11 +189,10 @@ const PotableWaterEntry = () => {
       level1: record.level1,
       level2: record.level2,
       level3: record.level3,
+      recordedDate: formattedDate,
       recordedBy: record.recordedBy || user?.username || ''
     })
     setEditingId(record.id)
-    // Update selectedDate to match the record's date
-    setSelectedDate(formattedDate)
   }
 
   const handleDelete = async (id) => {
@@ -272,16 +297,6 @@ const PotableWaterEntry = () => {
             </Form.Select>
           </Form.Group>
         </Col>
-        <Col md={4}>
-          <Form.Group>
-            <Form.Label>Record Date</Form.Label>
-            <Form.Control
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-            />
-          </Form.Group>
-        </Col>
       </Row>
 
       <Card className="mb-4">
@@ -294,6 +309,17 @@ const PotableWaterEntry = () => {
 
           <Form onSubmit={handleSubmit}>
             <Row>
+              <Col md={4}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Record Date</Form.Label>
+                  <Form.Control
+                    type="date"
+                    value={formData.recordedDate}
+                    onChange={(e) => setFormData({ ...formData, recordedDate: e.target.value })}
+                    required
+                  />
+                </Form.Group>
+              </Col>
               <Col md={4}>
                 <Form.Group className="mb-3">
                   <Form.Label>Purok</Form.Label>
@@ -309,7 +335,7 @@ const PotableWaterEntry = () => {
                   </Form.Select>
                 </Form.Group>
               </Col>
-              <Col md={8}>
+              <Col md={4}>
                 <Form.Group className="mb-3">
                   <Form.Label>Household Name</Form.Label>
                   <Form.Control
@@ -391,10 +417,9 @@ const PotableWaterEntry = () => {
                   level1: '0',
                   level2: '0',
                   level3: '0',
+                  recordedDate: new Date().toISOString().split('T')[0],
                   recordedBy: user?.username || ''
                 })
-                // Reset selectedDate to today
-                setSelectedDate(new Date().toISOString().split('T')[0])
               }}>
                 Cancel
               </Button>
@@ -469,53 +494,61 @@ const PotableWaterEntry = () => {
         )}
 
         <Card.Body className="p-0">
-          <Table responsive hover className="mb-0" size="sm">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Barangay</th>
-                <th>Purok</th>
-                <th>Household Name</th>
-                <th>Level 1</th>
-                <th>Level 2</th>
-                <th>Level 3</th>
-                <th>Recorded Date</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {currentRecords.length === 0 ? (
+          {loading ? (
+            <div className="text-center py-4">
+              <div className="spinner-border text-primary" role="status">
+                <span className="visually-hidden">Loading...</span>
+              </div>
+            </div>
+          ) : (
+            <Table responsive hover className="mb-0" size="sm">
+              <thead>
                 <tr>
-                  <td colSpan="9" className="text-center py-3 text-muted">
-                    {searchTerm || Object.values(filters).some(v => v) 
-                      ? 'No records found matching your filters' 
-                      : 'No records found'}
-                  </td>
+                  <th>#</th>
+                  <th>Barangay</th>
+                  <th>Purok</th>
+                  <th>Household Name</th>
+                  <th>Level 1</th>
+                  <th>Level 2</th>
+                  <th>Level 3</th>
+                  <th>Recorded Date</th>
+                  <th>Actions</th>
                 </tr>
-              ) : (
-                currentRecords.map((record, index) => (
-                  <tr key={record.id}>
-                    <td>{indexOfFirstRecord + index + 1}</td>
-                    <td>{record.barangay}</td>
-                    <td>Purok {record.purok}</td>
-                    <td>{record.householdName}</td>
-                    <td>{record.level1}</td>
-                    <td>{record.level2}</td>
-                    <td>{record.level3}</td>
-                    <td>{record.recordedDate ? new Date(record.recordedDate).toLocaleDateString() : 'N/A'}</td>
-                    <td>
-                      <Button variant="outline-primary" size="sm" onClick={() => handleEdit(record)}>
-                        Edit
-                      </Button>
-                      <Button variant="outline-danger" size="sm" className="ms-1" onClick={() => handleDelete(record.id)}>
-                        Delete
-                      </Button>
+              </thead>
+              <tbody>
+                {currentRecords.length === 0 ? (
+                  <tr>
+                    <td colSpan="9" className="text-center py-3 text-muted">
+                      {searchTerm || Object.values(filters).some(v => v) 
+                        ? 'No records found matching your filters' 
+                        : 'No records found'}
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </Table>
+                ) : (
+                  currentRecords.map((record, index) => (
+                    <tr key={record.id}>
+                      <td>{indexOfFirstRecord + index + 1}</td>
+                      <td>{record.barangay}</td>
+                      <td>Purok {record.purok}</td>
+                      <td>{record.householdName}</td>
+                      <td>{record.level1}</td>
+                      <td>{record.level2}</td>
+                      <td>{record.level3}</td>
+                      <td>{record.recordedDate ? new Date(record.recordedDate).toLocaleDateString() : 'N/A'}</td>
+                      <td>
+                        <Button variant="outline-primary" size="sm" onClick={() => handleEdit(record)}>
+                          Edit
+                        </Button>
+                        <Button variant="outline-danger" size="sm" className="ms-1" onClick={() => handleDelete(record.id)}>
+                          Delete
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </Table>
+          )}
         </Card.Body>
         
         {/* Pagination Footer */}

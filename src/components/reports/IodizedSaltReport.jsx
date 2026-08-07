@@ -10,6 +10,8 @@ import nutritionLogo from '../../assets/nutritionlogo.jpg'
 const IodizedSaltReport = () => {
   const { user } = useAuth()
   const [barangay, setBarangay] = useState('')
+  const [startDate, setStartDate] = useState(new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0])
+  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0])
   const [records, setRecords] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -19,15 +21,26 @@ const IodizedSaltReport = () => {
     if (barangay) {
       fetchRecords()
     }
-  }, [barangay])
+  }, [barangay, startDate, endDate])
 
   const fetchRecords = async () => {
     setLoading(true)
     setError('')
     try {
       const data = await iodizedSaltApi.getByBarangay(barangay)
-      setRecords(data)
-      generateReport(data)
+      
+      // Filter by date range
+      const filtered = data.filter(r => {
+        const recordDate = new Date(r.recordedDate)
+        const start = new Date(startDate)
+        const end = new Date(endDate)
+        start.setHours(0, 0, 0, 0)
+        end.setHours(23, 59, 59, 999)
+        return recordDate >= start && recordDate <= end
+      })
+      
+      setRecords(filtered)
+      generateReport(filtered)
     } catch (error) {
       setError('Error fetching records')
     } finally {
@@ -60,7 +73,10 @@ const IodizedSaltReport = () => {
         })
       })
     }
-    setReport({ purokReports, barangay })
+    const startYear = new Date(startDate).getFullYear()
+    const endYear = new Date(endDate).getFullYear()
+    const yearDisplay = startYear === endYear ? startYear.toString() : `${startYear}-${endYear}`
+    setReport({ purokReports, barangay, year: yearDisplay, startDate, endDate })
   }
 
   const handleExportPDF = () => {
@@ -81,6 +97,7 @@ const IodizedSaltReport = () => {
 
     doc.setFontSize(11)
     doc.text(`BARANGAY: ${barangayName}`, 14, 38)
+    doc.text(`DATE: ${new Date(report.startDate).toLocaleDateString()} - ${new Date(report.endDate).toLocaleDateString()}`, 14, 46)
 
     const body = report.purokReports.map((r, index) => [
       index + 1,
@@ -102,7 +119,7 @@ const IodizedSaltReport = () => {
     ])
 
     autoTable(doc, {
-      startY: 44,
+      startY: 52,
       head: [
         ['#', 'PUROK', 'Store Name', 'FIDEL', 'UFC', 'PACIFIC BAY', 'OTHERS', 
          'ATLANTIC', 'FIDEL', 'LASAP', 'PAG-ASA', 'JAY', 'OTHERS',
@@ -137,7 +154,7 @@ const IodizedSaltReport = () => {
     doc.text('________________', pageWidth - 45, finalY)
     doc.text('BNC CHAIRMAN', pageWidth - 45, finalY + 6)
 
-    doc.save(`Iodized_Salt_Report_${barangayName}.pdf`)
+    doc.save(`Iodized_Salt_Report_${barangayName}_${report.year}.pdf`)
   }
 
   return (
@@ -146,15 +163,39 @@ const IodizedSaltReport = () => {
 
       <Card className="mb-4">
         <Card.Body>
-          <Form.Group>
-            <Form.Label>Select Barangay</Form.Label>
-            <Form.Select value={barangay} onChange={(e) => setBarangay(e.target.value)}>
-              <option value="">-- Select a Barangay --</option>
-              {BARANGAYS.map((b) => (
-                <option key={b} value={b}>{b}</option>
-              ))}
-            </Form.Select>
-          </Form.Group>
+          <Row>
+            <Col md={4}>
+              <Form.Group>
+                <Form.Label>Select Barangay</Form.Label>
+                <Form.Select value={barangay} onChange={(e) => setBarangay(e.target.value)}>
+                  <option value="">-- Select a Barangay --</option>
+                  {BARANGAYS.map((b) => (
+                    <option key={b} value={b}>{b}</option>
+                  ))}
+                </Form.Select>
+              </Form.Group>
+            </Col>
+            <Col md={4}>
+              <Form.Group>
+                <Form.Label>Start Date</Form.Label>
+                <Form.Control
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
+              </Form.Group>
+            </Col>
+            <Col md={4}>
+              <Form.Group>
+                <Form.Label>End Date</Form.Label>
+                <Form.Control
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                />
+              </Form.Group>
+            </Col>
+          </Row>
         </Card.Body>
       </Card>
 
@@ -195,6 +236,7 @@ const IodizedSaltReport = () => {
                 MASTERLIST OF SARI-SARI STORES (RETAIL) SELLING IODIZED SALT
               </h5>
               <p className="mb-0"><strong>BARANGAY:</strong> {barangay.toUpperCase()}</p>
+              <p className="mb-0"><strong>DATE:</strong> {new Date(report.startDate).toLocaleDateString()} - {new Date(report.endDate).toLocaleDateString()}</p>
             </div>
 
             <div className="table-responsive">
