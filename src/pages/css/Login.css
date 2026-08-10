@@ -1,35 +1,104 @@
 .login-page {
   min-height: 100vh;
   width: 100%;
-  background: #E4F3E7;
-}
-
-.login-wrap {
-  min-height: 100vh;
-  width: 100%;
+  background: #0B3B32;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 1.5rem;
 }
 
-.login-card {
-  border: none;
-  border-radius: 16px;
-  box-shadow: 0 12px 40px rgba(63, 143, 93, 0.15);
-  overflow: hidden;
+.login-shell {
+  display: flex;
   width: 100%;
-  max-width: 400px;
+  max-width: 920px;
+  min-height: 540px;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
 }
 
-.login-card .card-body {
-  padding: 2.75rem 2.25rem;
+.login-brand-panel {
+  flex: 1.1;
+  background: #0B3B32;
+  padding: 3rem 2.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  color: white;
+}
+
+.login-brand-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.login-brand-badge {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-brand-badge svg {
+  width: 18px;
+  height: 18px;
+}
+
+.login-brand-header span {
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.login-brand-body h1 {
+  font-size: 26px;
+  font-weight: 500;
+  line-height: 1.35;
+  margin: 0 0 12px;
+  max-width: 320px;
+}
+
+.login-brand-body p {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #9FE1CB;
+  max-width: 300px;
+  margin: 0;
+}
+
+.login-brand-stats {
+  display: flex;
+  gap: 24px;
+}
+
+.stat-value {
+  font-size: 20px;
+  font-weight: 500;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #9FE1CB;
+}
+
+.login-form-panel {
+  flex: 1;
+  background: #ffffff;
+  padding: 3rem 2.75rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .login-logo-wrap {
   display: flex;
   justify-content: center;
-  margin-bottom: 1.25rem;
+  margin-bottom: 1rem;
 }
 
 .login-logo-wrap img {
@@ -41,8 +110,8 @@
 .login-logo-fallback {
   width: 68px;
   height: 68px;
-  border-radius: 16px;
-  background: #3F8F5D;
+  border-radius: 50%;
+  background: #E1F5EE;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -55,54 +124,82 @@
 
 .login-title {
   text-align: center;
-  font-weight: 700;
-  color: #245C3B;
+  font-weight: 600;
+  color: #085041;
   margin-bottom: 0.15rem;
-  font-size: 1.5rem;
+  font-size: 19px;
 }
 
 .login-subtitle {
   text-align: center;
-  color: #6FA484;
-  font-size: 0.85rem;
+  color: #6c757d;
+  font-size: 12px;
   margin-bottom: 1.75rem;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
 .login-form .form-label {
-  font-weight: 600;
-  font-size: 0.85rem;
-  color: #245C3B;
+  font-weight: 500;
+  font-size: 12px;
+  color: #5F5E5A;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .login-form .form-control {
-  border-radius: 9px;
-  border: 1.5px solid #D3E9D9;
+  border-radius: 8px;
+  border: 1.5px solid #D3D1C7;
   padding: 0.6rem 0.85rem;
 }
 
 .login-form .form-control:focus {
-  border-color: #3F8F5D;
-  box-shadow: 0 0 0 0.2rem rgba(63, 143, 93, 0.18);
+  border-color: #0F6E56;
+  box-shadow: 0 0 0 0.2rem rgba(15, 110, 86, 0.15);
+}
+
+.login-form-meta {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1.25rem;
+}
+
+.forgot-link {
+  font-size: 12px;
+  color: #0F6E56;
+  font-weight: 500;
+  text-decoration: none;
 }
 
 .login-submit-btn {
-  background: #3F8F5D;
+  background: #0F6E56;
   border: none;
-  border-radius: 9px;
+  border-radius: 8px;
   padding: 0.65rem;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.02em;
   transition: background 0.15s ease;
 }
 
 .login-submit-btn:hover:not(:disabled) {
-  background: #327449;
+  background: #085041;
 }
 
 .login-submit-btn:disabled {
-  background: #A9CDB8;
+  background: #9FE1CB;
+}
+
+.login-help-text {
+  text-align: center;
+  font-size: 12px;
+  color: #888780;
+  margin-top: 1.5rem;
+}
+
+.login-help-text a {
+  color: #0F6E56;
+  font-weight: 500;
+  text-decoration: none;
 }
 
 .password-input-wrapper {
@@ -126,10 +223,25 @@
 }
 
 .password-toggle-btn:hover {
-  color: #3F8F5D;
+  color: #0F6E56;
   background: transparent;
 }
 
 .password-toggle-btn:focus {
   box-shadow: none;
+}
+
+@media (max-width: 768px) {
+  .login-shell {
+    flex-direction: column;
+    max-width: 420px;
+  }
+
+  .login-brand-panel {
+    display: none;
+  }
+
+  .login-form-panel {
+    padding: 2.5rem 1.75rem;
+  }
 }

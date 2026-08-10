@@ -1,10 +1,9 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
-import { Card, Form, Button, Alert } from 'react-bootstrap'
+import { Form, Button, Alert } from 'react-bootstrap'
 import './css/Login.css'
 import nutritionLogo from '../assets/nutritionlogo.jpg'
-
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -28,11 +27,9 @@ const Login = () => {
     try {
       const result = await login(formData)
 
-
       if (result.success) {
         navigate('/dashboard')
       } else {
-        console.log('❌ Login failed:', result.error)
         setError(result.error)
         setDebugInfo({
           error: result.error,
@@ -41,7 +38,6 @@ const Login = () => {
         })
       }
     } catch (error) {
-      console.error('💥 Unexpected error during login:', error)
       setError('An unexpected error occurred. Check console for details.')
       setDebugInfo({
         error: error.message,
@@ -50,103 +46,131 @@ const Login = () => {
       })
     } finally {
       setLoading(false)
-      console.log('🏁 Login process completed')
     }
   }
 
   return (
     <div className="login-page">
-      <div className="login-wrap">
-        <Card className="login-card">
-          <Card.Body>
-            <div className="login-logo-wrap">
-  {!logoFailed ? (
-    <img
-      src={nutritionLogo}
-      alt="Municipal Nutrition Council logo"
-      onError={() => setLogoFailed(true)}
-    />
-  ) : (
-    <div className="login-logo-fallback">
-      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 2C12 2 6 8.5 6 13.5C6 17.09 8.69 20 12 20C15.31 20 18 17.09 18 13.5C18 8.5 12 2 12 2Z" fill="#3F8F5D"/>
-        <path d="M12 20C12 20 12 16 12 13" stroke="#F5F1E8" strokeWidth="1.4" strokeLinecap="round"/>
-      </svg>
-    </div>
-  )}
-</div>
+      <div className="login-shell">
+        <div className="login-brand-panel">
+          <div className="login-brand-header">
+            <div className="login-brand-badge">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="10" fill="#F0997B"/>
+              </svg>
+            </div>
+            <span>National Nutrition Council</span>
+          </div>
 
-            <h2 className="login-title">Welcome back</h2>
-            <p className="login-subtitle">Nutrition Management Portal</p>
-            <p> mark@gmail.com</p>
-            <p> mark123</p>
-            <p> dextertenchavez@gmail.com</p>
-            <p> Jericho@453</p>
+          <div className="login-brand-body">
+            <h1>Nutrition data, organized for every barangay.</h1>
+            <p>Track reports, manage staff access, and generate PDF summaries from one portal.</p>
+          </div>
 
-            {error && <Alert variant="danger">{error}</Alert>}
+          <div className="login-brand-stats">
+            <div>
+              <div className="stat-value">8</div>
+              <div className="stat-label">Report modules</div>
+            </div>
+            <div>
+              <div className="stat-value">100%</div>
+              <div className="stat-label">Role-based access</div>
+            </div>
+          </div>
+        </div>
 
-            {debugInfo && (
-              <Alert variant="info" className="mt-2" style={{ fontSize: '12px' }}>
-                <strong>Debug Info:</strong>
-                <pre className="mb-0 mt-1" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
-                  {JSON.stringify(debugInfo, null, 2)}
-                </pre>
-              </Alert>
+        <div className="login-form-panel">
+          <div className="login-logo-wrap">
+            {!logoFailed ? (
+              <img
+                src={nutritionLogo}
+                alt="National Nutrition Council logo"
+                onError={() => setLogoFailed(true)}
+              />
+            ) : (
+              <div className="login-logo-fallback">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 2C12 2 6 8.5 6 13.5C6 17.09 8.69 20 12 20C15.31 20 18 17.09 18 13.5C18 8.5 12 2 12 2Z" fill="#0F6E56"/>
+                  <path d="M12 20C12 20 12 16 12 13" stroke="#E1F5EE" strokeWidth="1.4" strokeLinecap="round"/>
+                </svg>
+              </div>
             )}
+          </div>
 
-            <Form onSubmit={handleSubmit} className="login-form">
-              <Form.Group className="mb-3">
-                <Form.Label>Username or Email</Form.Label>
+          <h2 className="login-title">Welcome back</h2>
+          <p className="login-subtitle">Nutrition Management Portal</p>
+
+          {error && <Alert variant="danger">{error}</Alert>}
+
+          {debugInfo && (
+            <Alert variant="info" className="mt-2" style={{ fontSize: '12px' }}>
+              <strong>Debug Info:</strong>
+              <pre className="mb-0 mt-1" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+                {JSON.stringify(debugInfo, null, 2)}
+              </pre>
+            </Alert>
+          )}
+
+          <Form onSubmit={handleSubmit} className="login-form">
+            <Form.Group className="mb-3">
+              <Form.Label>Username or email</Form.Label>
+              <Form.Control
+                type="text"
+                value={formData.username}
+                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                required
+                placeholder="name@example.com"
+              />
+            </Form.Group>
+
+            <Form.Group className="mb-3">
+              <Form.Label>Password</Form.Label>
+              <div className="password-input-wrapper">
                 <Form.Control
-                  type="text"
-                  value={formData.username}
-                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                  type={showPassword ? 'text' : 'password'}
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   required
-                  placeholder="Enter username or email"
+                  placeholder="Enter your password"
                 />
-              </Form.Group>
+                <Button
+                  variant="link"
+                  className="password-toggle-btn"
+                  onClick={() => setShowPassword(!showPassword)}
+                  tabIndex="-1"
+                >
+                  {showPassword ? (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                      <line x1="1" y1="1" x2="23" y2="23"/>
+                    </svg>
+                  ) : (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                      <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                  )}
+                </Button>
+              </div>
+            </Form.Group>
 
-              <Form.Group className="mb-4">
-                <Form.Label>Password</Form.Label>
-                <div className="password-input-wrapper">
-                  <Form.Control
-                    type={showPassword ? 'text' : 'password'}
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    required
-                    placeholder="Enter password"
-                  />
-                  <Button
-                    variant="link"
-                    className="password-toggle-btn"
-                    onClick={() => setShowPassword(!showPassword)}
-                    tabIndex="-1"
-                  >
-                    {showPassword ? (
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
-                        <line x1="1" y1="1" x2="23" y2="23"/>
-                      </svg>
-                    ) : (
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                        <circle cx="12" cy="12" r="3"/>
-                      </svg>
-                    )}
-                  </Button>
-                </div>
-              </Form.Group>
+            <div className="login-form-meta">
+              <a href="#forgot" className="forgot-link">Forgot password?</a>
+            </div>
 
-              <Button
-                type="submit"
-                className="w-100 login-submit-btn"
-                disabled={loading}
-              >
-                {loading ? 'Logging in...' : 'Login'}
-              </Button>
-            </Form>
-          </Card.Body>
-        </Card>
+            <Button
+              type="submit"
+              className="w-100 login-submit-btn"
+              disabled={loading}
+            >
+              {loading ? 'Logging in...' : 'Login'}
+            </Button>
+          </Form>
+
+          <p className="login-help-text">
+            Having trouble signing in? <a href="#contact">Contact your administrator</a>
+          </p>
+        </div>
       </div>
     </div>
   )
