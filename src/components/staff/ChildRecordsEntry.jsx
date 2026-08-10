@@ -7,8 +7,11 @@ import { FaSearch, FaTimes, FaFilter } from 'react-icons/fa'
 
 const ChildRecordsEntry = () => {
   const { user } = useAuth()
+  const isAdmin = user?.role === 'admin'
+  const userBarangay = user?.barangay || ''
+  
   const [formData, setFormData] = useState({
-    barangay: user?.barangay || '',
+    barangay: userBarangay,
     purok: '',
     targetCategory: 'Child (0–59 months)',
     fullName: '',
@@ -32,7 +35,6 @@ const ChildRecordsEntry = () => {
   
   // Filter state
   const [filters, setFilters] = useState({
-    barangay: '',
     purok: '',
     nutritionalStatus: '',
     ageMin: '',
@@ -55,8 +57,10 @@ const ChildRecordsEntry = () => {
   const fetchRecords = async () => {
     try {
       const data = await childRecordApi.getAll()
-      setRecords(data)
-      setFilteredRecords(data)
+      // Filter by barangay if user is not admin
+      const filteredData = isAdmin ? data : data.filter(r => r.barangay === userBarangay)
+      setRecords(filteredData)
+      setFilteredRecords(filteredData)
     } catch (error) {
       console.error('Error fetching records:', error)
     }
@@ -74,10 +78,6 @@ const ChildRecordsEntry = () => {
     }
 
     // Apply filters
-    if (filters.barangay) {
-      filtered = filtered.filter(record => record.barangay === filters.barangay)
-    }
-
     if (filters.purok) {
       filtered = filtered.filter(record => record.purok === parseInt(filters.purok))
     }
@@ -111,7 +111,7 @@ const ChildRecordsEntry = () => {
     }
 
     setFilteredRecords(filtered)
-    setCurrentPage(1) // Reset to first page when filters change
+    setCurrentPage(1)
   }
 
   // Get current records for pagination
@@ -140,7 +140,7 @@ const ChildRecordsEntry = () => {
   const handlePageSizeChange = (e) => {
     const newSize = parseInt(e.target.value)
     setRecordsPerPage(newSize)
-    setCurrentPage(1) // Reset to first page
+    setCurrentPage(1)
   }
 
   const checkDuplicateChild = (fullName, barangay, purok, excludeId = null) => {
@@ -215,7 +215,7 @@ const ChildRecordsEntry = () => {
       }
 
       setFormData({
-        barangay: user?.barangay || '',
+        barangay: userBarangay,
         purok: '',
         targetCategory: 'Child (0–59 months)',
         fullName: '',
@@ -287,7 +287,6 @@ const ChildRecordsEntry = () => {
 
   const clearFilters = () => {
     setFilters({
-      barangay: '',
       purok: '',
       nutritionalStatus: '',
       ageMin: '',
@@ -316,7 +315,6 @@ const ChildRecordsEntry = () => {
       startPage = Math.max(1, endPage - maxVisible + 1)
     }
 
-    // Add first page button
     if (startPage > 1) {
       items.push(
         <Pagination.Item key={1} onClick={() => paginate(1)}>
@@ -340,7 +338,6 @@ const ChildRecordsEntry = () => {
       )
     }
 
-    // Add last page button
     if (endPage < totalPages) {
       if (endPage < totalPages - 1) {
         items.push(<Pagination.Ellipsis key="ellipsis2" />)
@@ -355,7 +352,6 @@ const ChildRecordsEntry = () => {
     return items
   }
 
-  // Page size options
   const pageSizeOptions = [5, 10, 15, 25, 50, 100]
 
   return (
@@ -372,13 +368,14 @@ const ChildRecordsEntry = () => {
 
           <Form onSubmit={handleSubmit}>
             <Row>
-              <Col md={6}>
+              <Col md={4}>
                 <Form.Group className="mb-3">
                   <Form.Label>Barangay</Form.Label>
                   <Form.Select
                     value={formData.barangay}
                     onChange={(e) => setFormData({ ...formData, barangay: e.target.value })}
                     required
+                    disabled={!isAdmin}
                   >
                     <option value="">Select Barangay</option>
                     {BARANGAYS.map((b) => (
@@ -387,7 +384,7 @@ const ChildRecordsEntry = () => {
                   </Form.Select>
                 </Form.Group>
               </Col>
-              <Col md={6}>
+              <Col md={4}>
                 <Form.Group className="mb-3">
                   <Form.Label>Purok</Form.Label>
                   <Form.Select
@@ -400,6 +397,17 @@ const ChildRecordsEntry = () => {
                       <option key={p} value={p}>Purok {p}</option>
                     ))}
                   </Form.Select>
+                </Form.Group>
+              </Col>
+              <Col md={4}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Record Date</Form.Label>
+                  <Form.Control
+                    type="date"
+                    value={formData.recordedDate}
+                    onChange={(e) => setFormData({ ...formData, recordedDate: e.target.value })}
+                    required
+                  />
                 </Form.Group>
               </Col>
             </Row>
@@ -497,20 +505,6 @@ const ChildRecordsEntry = () => {
               </Col>
             </Row>
 
-            <Row>
-              <Col md={4}>
-                <Form.Group className="mb-3">
-                  <Form.Label>Record Date</Form.Label>
-                  <Form.Control
-                    type="date"
-                    value={formData.recordedDate}
-                    onChange={(e) => setFormData({ ...formData, recordedDate: e.target.value })}
-                    required
-                  />
-                </Form.Group>
-              </Col>
-            </Row>
-
             <Button type="submit" variant="primary" disabled={loading}>
               {loading ? 'Saving...' : (editingId ? 'Update' : 'Save')}
             </Button>
@@ -518,7 +512,7 @@ const ChildRecordsEntry = () => {
               <Button variant="secondary" className="ms-2" onClick={() => {
                 setEditingId(null)
                 setFormData({
-                  barangay: user?.barangay || '',
+                  barangay: userBarangay,
                   purok: '',
                   targetCategory: 'Child (0–59 months)',
                   fullName: '',
@@ -584,20 +578,6 @@ const ChildRecordsEntry = () => {
           <Card.Body className="bg-light border-bottom">
             <Row>
               <Col md={3}>
-                <Form.Group className="mb-2">
-                  <Form.Label>Barangay</Form.Label>
-                  <Form.Select
-                    value={filters.barangay}
-                    onChange={(e) => handleFilterChange('barangay', e.target.value)}
-                  >
-                    <option value="">All</option>
-                    {BARANGAYS.map((b) => (
-                      <option key={b} value={b}>{b}</option>
-                    ))}
-                  </Form.Select>
-                </Form.Group>
-              </Col>
-              <Col md={2}>
                 <Form.Group className="mb-2">
                   <Form.Label>Purok</Form.Label>
                   <Form.Select
@@ -714,7 +694,6 @@ const ChildRecordsEntry = () => {
             <thead>
               <tr>
                 <th>#</th>
-                <th>Barangay</th>
                 <th>Purok</th>
                 <th>Name</th>
                 <th>Age (mos)</th>
@@ -728,7 +707,7 @@ const ChildRecordsEntry = () => {
             <tbody>
               {currentRecords.length === 0 ? (
                 <tr>
-                  <td colSpan="10" className="text-center py-3 text-muted">
+                  <td colSpan="9" className="text-center py-3 text-muted">
                     {searchTerm || Object.values(filters).some(v => v) 
                       ? 'No records found matching your filters' 
                       : 'No records found'}
@@ -738,7 +717,6 @@ const ChildRecordsEntry = () => {
                 currentRecords.map((record, index) => (
                   <tr key={record.id}>
                     <td>{indexOfFirstRecord + index + 1}</td>
-                    <td>{record.barangay}</td>
                     <td>Purok {record.purok}</td>
                     <td>{record.fullName}</td>
                     <td>{record.ageMonths}</td>

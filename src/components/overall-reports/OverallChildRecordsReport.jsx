@@ -1,32 +1,39 @@
+// components/overall-reports/OverallChildRecordsReport.jsx
 import { useState, useEffect } from 'react'
-import { useAuth } from '../hooks/useAuth'
-import { reportApi } from '../api/auth'
-import { Card, Row, Col, Form, Spinner, Table, Button } from 'react-bootstrap'
+import { childRecordApi } from '../../api/auth'
+import { Card, Row, Col, Form, Spinner, Table, Button, Alert } from 'react-bootstrap'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import nutritionLogo from '../assets/nutritionlogo.jpg'
+import nutritionLogo from '../../assets/nutritionlogo.jpg'
 
-const OverallReport = () => {
-  const { user } = useAuth()
+const OverallChildRecordsReport = () => {
   const [report, setReport] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [year, setYear] = useState(new Date().getFullYear())
-  const [quarter, setQuarter] = useState('')
   const [error, setError] = useState('')
+  const [startDate, setStartDate] = useState(new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0])
+  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0])
 
   useEffect(() => {
     fetchOverallReport()
-  }, [year, quarter])
+  }, [startDate, endDate])
 
   const fetchOverallReport = async () => {
     setLoading(true)
     setError('')
     try {
-      const params = { year }
-      if (quarter) params.quarter = quarter
-
-      const data = await reportApi.getOverallReport(params)
-      setReport(data)
+      const allRecords = await childRecordApi.getAll()
+      
+      const dateFiltered = allRecords.filter(r => {
+        const recordDate = new Date(r.recordedDate)
+        const start = new Date(startDate)
+        const end = new Date(endDate)
+        start.setHours(0, 0, 0, 0)
+        end.setHours(23, 59, 59, 999)
+        return recordDate >= start && recordDate <= end
+      })
+      
+      const barangayData = generateBarangayData(dateFiltered)
+      setReport(barangayData)
     } catch (error) {
       setError(error.response?.data?.message || 'Error fetching report')
     } finally {
@@ -34,18 +41,54 @@ const OverallReport = () => {
     }
   }
 
+  const generateBarangayData = (records) => {
+    const barangays = [...new Set(records.map(r => r.barangay))].sort()
+    
+    const barangayReports = barangays.map(barangay => {
+      const barangayRecords = records.filter(r => r.barangay === barangay)
+      const months6To11 = barangayRecords.filter(r => r.ageMonths >= 6 && r.ageMonths <= 11).length
+      const months12To59 = barangayRecords.filter(r => r.ageMonths >= 12 && r.ageMonths <= 59).length
+      const underweightSUW = barangayRecords.filter(r => 
+        r.nutritionalStatus === 'Underweight' || r.nutritionalStatus === 'Severely Underweight'
+      ).length
+      
+      return { barangay, months6To11, months12To59, underweightSUW }
+    })
+    
+    const overallTotal = {
+      months6To11: barangayReports.reduce((sum, b) => sum + b.months6To11, 0),
+      months12To59: barangayReports.reduce((sum, b) => sum + b.months12To59, 0),
+      underweightSUW: barangayReports.reduce((sum, b) => sum + b.underweightSUW, 0),
+      totalBarangays: barangayReports.length
+    }
+    
+    return {
+      barangays: barangayReports,
+      overallTotal,
+      startDate,
+      endDate,
+      preparedBy: 'Cristine A. Macahis, MNPC',
+      notedBy: 'Jehd Stephen O. Cutamora, RN'
+    }
+  }
+
+  const getYearDisplay = () => {
+    const startYear = new Date(startDate).getFullYear()
+    const endYear = new Date(endDate).getFullYear()
+    return startYear === endYear ? startYear.toString() : `${startYear}-${endYear}`
+  }
+
   const handleExportPDF = () => {
     if (!report) return
 
     const doc = new jsPDF()
     const pageWidth = doc.internal.pageSize.getWidth()
+    const yearDisplay = getYearDisplay()
 
-    // --- LOGO (top left) ---
     const logoImg = new Image()
     logoImg.src = nutritionLogo
     doc.addImage(logoImg, 'JPEG', 14, 6, 22, 22)
 
-    // --- HEADER ---
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(11)
     doc.text('Republic of the Philippines', pageWidth / 2, 14, { align: 'center' })
@@ -54,9 +97,11 @@ const OverallReport = () => {
     doc.text('MUNICIPAL NUTRITION COUNCIL', pageWidth / 2, 32, { align: 'center' })
 
     doc.setFontSize(15)
-    doc.text(`VITAMIN A ${report.year}`, pageWidth / 2, 42, { align: 'center' })
+    doc.text(`VITAMIN A CY:${yearDisplay}`, pageWidth / 2, 42, { align: 'center' })
 
-    // --- TABLE ---
+    doc.setFontSize(10)
+    doc.text(`DATE: ${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}`, pageWidth / 2, 48, { align: 'center' })
+
     const body = (report.barangays || []).map((b, i) => [
       i + 1,
       b.barangay,
@@ -73,7 +118,7 @@ const OverallReport = () => {
     ])
 
     autoTable(doc, {
-      startY: 48,
+      startY: 54,
       head: [['#', 'BARANGAY', '6 - 11', '12 - 59', 'NO. OF CHILDREN UW & SUW']],
       body,
       theme: 'grid',
@@ -95,7 +140,6 @@ const OverallReport = () => {
 
     const finalY = doc.lastAutoTable.finalY + 20
 
-    // --- SIGNATURES ---
     doc.setFontSize(10)
     doc.setFont('helvetica', 'bold')
     doc.text('PREPARED BY:', 14, finalY)
@@ -105,11 +149,7 @@ const OverallReport = () => {
     doc.text(report.preparedBy || 'Cristine A. Macahis, MNPC', 14, finalY + 12)
     doc.text(report.notedBy || 'Jehd Stephen O. Cutamora, RN', pageWidth - 80, finalY + 12)
 
-    doc.save(`Overall_Report_${report.year}.pdf`)
-  }
-
-  if (!user || user.role !== 'admin') {
-    return <div className="text-center py-5">Access denied. Admin only.</div>
+    doc.save(`Overall_VitaminA_Report_${yearDisplay}.pdf`)
   }
 
   if (loading) {
@@ -124,61 +164,41 @@ const OverallReport = () => {
   if (error) {
     return (
       <div className="text-center py-5">
-        <div className="alert alert-danger">{error}</div>
-        <button className="btn btn-primary" onClick={fetchOverallReport}>Retry</button>
+        <Alert variant="danger">{error}</Alert>
+        <Button variant="primary" onClick={fetchOverallReport}>Retry</Button>
       </div>
     )
   }
 
-  if (!report) {
-    return <div className="text-center py-5 text-muted">No data available</div>
+  if (!report || report.barangays.length === 0) {
+    return (
+      <div className="text-center py-5">
+        <Alert variant="info">No records found for the selected date range.</Alert>
+      </div>
+    )
   }
+
+  const yearDisplay = getYearDisplay()
 
   return (
     <div>
       <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <div className="d-flex align-items-center gap-3">
-          <img 
-            src={nutritionLogo} 
-            alt="Nutrition Logo" 
-            style={{ 
-              width: '50px', 
-              height: '50px', 
-              objectFit: 'cover',
-              borderRadius: '50%',
-              border: '2px solid #198754'
-            }} 
-          />
-          <h1 className="mb-0">Overall Report - {report.year}</h1>
+          <img src={nutritionLogo} alt="Logo" style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '50%', border: '2px solid #198754' }} />
+          <div>
+            <h1 className="mb-0">Vitamin A Overall Report</h1>
+            <small className="text-muted">CY: {yearDisplay}</small>
+          </div>
         </div>
-        <div className="d-flex gap-2">
-          <Form.Select
-            value={year}
-            onChange={(e) => setYear(parseInt(e.target.value))}
-            style={{ width: '100px' }}
-          >
-            {[2024, 2025, 2026, 2027].map(y => (
-              <option key={y} value={y}>{y}</option>
-            ))}
-          </Form.Select>
-          <Form.Select
-            value={quarter}
-            onChange={(e) => setQuarter(e.target.value)}
-            style={{ width: '120px' }}
-          >
-            <option value="">All Quarters</option>
-            <option value="Q1">Q1</option>
-            <option value="Q2">Q2</option>
-            <option value="Q3">Q3</option>
-            <option value="Q4">Q4</option>
-          </Form.Select>
+        <div className="d-flex gap-2 flex-wrap">
+          <Form.Control type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={{ width: '150px' }} />
+          <Form.Control type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} style={{ width: '150px' }} />
           <Button variant="success" onClick={handleExportPDF}>
             <i className="bi bi-file-pdf-fill me-2"></i>Export PDF
           </Button>
         </div>
       </div>
 
-      {/* Stats Cards */}
       <Row className="g-4 mb-4">
         <Col md={3}>
           <Card className="text-center border-0 shadow-sm">
@@ -214,24 +234,14 @@ const OverallReport = () => {
         </Col>
       </Row>
 
-      {/* Table */}
       <Card className="border-0 shadow-sm">
         <Card.Header className="text-center bg-white border-0 pt-3">
           <div className="d-flex align-items-center justify-content-center gap-3">
-            <img 
-              src={nutritionLogo} 
-              alt="Nutrition Logo" 
-              style={{ 
-                width: '35px', 
-                height: '35px', 
-                objectFit: 'cover',
-                borderRadius: '50%',
-                border: '2px solid #198754'
-              }} 
-            />
+            <img src={nutritionLogo} alt="Logo" style={{ width: '35px', height: '35px', objectFit: 'cover', borderRadius: '50%', border: '2px solid #198754' }} />
             <div>
               <div className="fw-bold">MUNICIPAL NUTRITION COUNCIL</div>
-              <div className="fw-bold fs-5 text-success">VITAMIN A {report.year}</div>
+              <div className="fw-bold fs-5 text-success">VITAMIN A CY: {yearDisplay}</div>
+              <div className="text-muted small">{new Date(startDate).toLocaleDateString()} - {new Date(endDate).toLocaleDateString()}</div>
             </div>
           </div>
         </Card.Header>
@@ -247,13 +257,13 @@ const OverallReport = () => {
               </tr>
             </thead>
             <tbody>
-              {report.barangays && report.barangays.map((barangay, i) => (
+              {report.barangays.map((barangay, i) => (
                 <tr key={barangay.barangay}>
                   <td className="text-center">{i + 1}</td>
                   <td>{barangay.barangay}</td>
-                  <td className="text-center">{barangay.months6To11 || ''}</td>
-                  <td className="text-center">{barangay.months12To59 || ''}</td>
-                  <td className="text-center">{barangay.underweightSUW || ''}</td>
+                  <td className="text-center">{barangay.months6To11 || 0}</td>
+                  <td className="text-center">{barangay.months12To59 || 0}</td>
+                  <td className="text-center">{barangay.underweightSUW || 0}</td>
                 </tr>
               ))}
               <tr className="table-primary fw-bold">
@@ -267,38 +277,17 @@ const OverallReport = () => {
         </Card.Body>
       </Card>
 
-      {/* Signatures */}
       <Row className="mt-4">
         <Col md={6}>
           <div className="d-flex align-items-center gap-2 mb-1">
-            <img 
-              src={nutritionLogo} 
-              alt="Logo" 
-              style={{ 
-                width: '25px', 
-                height: '25px', 
-                objectFit: 'cover',
-                borderRadius: '50%',
-                border: '1px solid #198754'
-              }} 
-            />
+            <img src={nutritionLogo} alt="Logo" style={{ width: '25px', height: '25px', objectFit: 'cover', borderRadius: '50%', border: '1px solid #198754' }} />
             <p className="fw-bold mb-0">PREPARED BY:</p>
           </div>
           <p>{report.preparedBy || 'Cristine A. Macahis, MNPC'}</p>
         </Col>
         <Col md={6}>
           <div className="d-flex align-items-center gap-2 mb-1">
-            <img 
-              src={nutritionLogo} 
-              alt="Logo" 
-              style={{ 
-                width: '25px', 
-                height: '25px', 
-                objectFit: 'cover',
-                borderRadius: '50%',
-                border: '1px solid #198754'
-              }} 
-            />
+            <img src={nutritionLogo} alt="Logo" style={{ width: '25px', height: '25px', objectFit: 'cover', borderRadius: '50%', border: '1px solid #198754' }} />
             <p className="fw-bold mb-0">NOTED BY:</p>
           </div>
           <p>{report.notedBy || 'Jehd Stephen O. Cutamora, RN'}</p>
@@ -308,4 +297,4 @@ const OverallReport = () => {
   )
 }
 
-export default OverallReport
+export default OverallChildRecordsReport

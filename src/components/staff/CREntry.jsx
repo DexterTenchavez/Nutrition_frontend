@@ -7,6 +7,7 @@ import { FaSearch, FaTimes, FaFilter } from 'react-icons/fa'
 
 const CREntry = () => {
   const { user } = useAuth()
+  const isAdmin = user?.role === 'admin'
   const [formData, setFormData] = useState({
     barangay: user?.barangay || '',
     purok: '',
@@ -23,7 +24,6 @@ const CREntry = () => {
   const [success, setSuccess] = useState('')
   const [editingId, setEditingId] = useState(null)
   const [selectedBarangay, setSelectedBarangay] = useState(user?.barangay || '')
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
@@ -41,7 +41,7 @@ const CREntry = () => {
     if (selectedBarangay) {
       fetchRecords()
     }
-  }, [selectedBarangay, selectedDate])
+  }, [selectedBarangay])
 
   useEffect(() => {
     applyFiltersAndSearch()
@@ -49,8 +49,8 @@ const CREntry = () => {
 
   const fetchRecords = async () => {
     try {
-      const year = new Date(selectedDate).getFullYear()
-      const data = await crApi.getByBarangay(selectedBarangay, year)
+      // Use year 0 to fetch all records
+      const data = await crApi.getByBarangay(selectedBarangay, 0)
       setRecords(data)
       setFilteredRecords(data)
     } catch (error) {
@@ -120,7 +120,7 @@ const CREntry = () => {
     setFormData({ 
       ...formData, 
       withCR: checked,
-      withoutCR: checked ? false : formData.withoutCR // If With CR is ON, turn OFF Without CR
+      withoutCR: checked ? false : formData.withoutCR
     })
   }
 
@@ -129,7 +129,7 @@ const CREntry = () => {
     setFormData({ 
       ...formData, 
       withoutCR: checked,
-      withCR: checked ? false : formData.withCR // If Without CR is ON, turn OFF With CR
+      withCR: checked ? false : formData.withCR
     })
   }
 
@@ -140,7 +140,7 @@ const CREntry = () => {
     setLoading(true)
 
     try {
-      const year = new Date(selectedDate).getFullYear()
+      const year = new Date(formData.recordedDate).getFullYear()
       
       const data = {
         ...formData,
@@ -149,7 +149,7 @@ const CREntry = () => {
         withCR: formData.withCR,
         withoutCR: formData.withoutCR,
         year: year,
-        recordedDate: selectedDate
+        recordedDate: formData.recordedDate
       }
 
       if (editingId) {
@@ -191,7 +191,6 @@ const CREntry = () => {
       recordedDate: formattedDate,
       recordedBy: record.recordedBy || user?.username || ''
     })
-    setSelectedDate(formattedDate)
     setEditingId(record.id)
   }
 
@@ -291,22 +290,13 @@ const CREntry = () => {
             <Form.Select
               value={selectedBarangay}
               onChange={(e) => setSelectedBarangay(e.target.value)}
+              disabled={!isAdmin}
             >
               <option value="">Select Barangay</option>
               {BARANGAYS.map((b) => (
                 <option key={b} value={b}>{b}</option>
               ))}
             </Form.Select>
-          </Form.Group>
-        </Col>
-        <Col md={4}>
-          <Form.Group>
-            <Form.Label>Record Date</Form.Label>
-            <Form.Control
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-            />
           </Form.Group>
         </Col>
       </Row>
@@ -323,6 +313,17 @@ const CREntry = () => {
             <Row>
               <Col md={4}>
                 <Form.Group className="mb-3">
+                  <Form.Label>Record Date</Form.Label>
+                  <Form.Control
+                    type="date"
+                    value={formData.recordedDate}
+                    onChange={(e) => setFormData({ ...formData, recordedDate: e.target.value })}
+                    required
+                  />
+                </Form.Group>
+              </Col>
+              <Col md={4}>
+                <Form.Group className="mb-3">
                   <Form.Label>Purok</Form.Label>
                   <Form.Select
                     value={formData.purok}
@@ -336,7 +337,7 @@ const CREntry = () => {
                   </Form.Select>
                 </Form.Group>
               </Col>
-              <Col md={8}>
+              <Col md={4}>
                 <Form.Group className="mb-3">
                   <Form.Label>Household Name</Form.Label>
                   <Form.Control
@@ -396,7 +397,6 @@ const CREntry = () => {
                   recordedDate: new Date().toISOString().split('T')[0],
                   recordedBy: user?.username || ''
                 })
-                setSelectedDate(new Date().toISOString().split('T')[0])
               }}>
                 Cancel
               </Button>

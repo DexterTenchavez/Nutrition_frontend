@@ -9,8 +9,12 @@ import nutritionLogo from '../../assets/nutritionlogo.jpg'
 
 const CRReport = () => {
   const { user } = useAuth()
-  const [barangay, setBarangay] = useState('')
-  const [year, setYear] = useState(new Date().getFullYear())
+  const isAdmin = user?.role === 'admin'
+  const userBarangay = user?.barangay || ''
+  
+  const [barangay, setBarangay] = useState(isAdmin ? '' : userBarangay)
+  const [startDate, setStartDate] = useState(new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0])
+  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0])
   const [records, setRecords] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -20,15 +24,25 @@ const CRReport = () => {
     if (barangay) {
       fetchRecords()
     }
-  }, [barangay, year])
+  }, [barangay, startDate, endDate])
 
   const fetchRecords = async () => {
     setLoading(true)
     setError('')
     try {
-      const data = await crApi.getByBarangay(barangay, year)
-      setRecords(data)
-      generateReport(data)
+      const data = await crApi.getByBarangay(barangay, 0)
+      
+      const filtered = data.filter(r => {
+        const recordDate = new Date(r.recordedDate)
+        const start = new Date(startDate)
+        const end = new Date(endDate)
+        start.setHours(0, 0, 0, 0)
+        end.setHours(23, 59, 59, 999)
+        return recordDate >= start && recordDate <= end
+      })
+      
+      setRecords(filtered)
+      generateReport(filtered)
     } catch (error) {
       setError('Error fetching records')
     } finally {
@@ -50,7 +64,10 @@ const CRReport = () => {
       withCR: purokReports.reduce((sum, p) => sum + p.withCR, 0),
       withoutCR: purokReports.reduce((sum, p) => sum + p.withoutCR, 0)
     }
-    setReport({ purokReports, total, barangay, year })
+    const startYear = new Date(startDate).getFullYear()
+    const endYear = new Date(endDate).getFullYear()
+    const yearDisplay = startYear === endYear ? startYear.toString() : `${startYear}-${endYear}`
+    setReport({ purokReports, total, barangay, year: yearDisplay, startDate, endDate })
   }
 
   const handleExportPDF = () => {
@@ -67,10 +84,11 @@ const CRReport = () => {
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(14)
     doc.text('CONSOLIDATED REPORT ON', pageWidth / 2, 18, { align: 'center' })
-    doc.text(`WITH & WITHOUT CR ${report.year}`, pageWidth / 2, 26, { align: 'center' })
+    doc.text(`WITH & WITHOUT CR CY:${report.year}`, pageWidth / 2, 26, { align: 'center' })
 
     doc.setFontSize(11)
     doc.text(`BARANGAY: ${barangayName}`, 14, 38)
+    doc.text(`DATE: ${new Date(report.startDate).toLocaleDateString()} - ${new Date(report.endDate).toLocaleDateString()}`, 14, 46)
 
     const body = report.purokReports.map((p) => [
       p.purok,
@@ -85,7 +103,7 @@ const CRReport = () => {
     ])
 
     autoTable(doc, {
-      startY: 44,
+      startY: 52,
       head: [['PUROK', 'WITH CR', 'WITHOUT CR']],
       body,
       theme: 'grid',
@@ -120,25 +138,44 @@ const CRReport = () => {
       <Card className="mb-4">
         <Card.Body>
           <Row>
-            <Col md={6}>
+            <Col md={4}>
               <Form.Group>
                 <Form.Label>Select Barangay</Form.Label>
-                <Form.Select value={barangay} onChange={(e) => setBarangay(e.target.value)}>
+                <Form.Select 
+                  value={barangay} 
+                  onChange={(e) => setBarangay(e.target.value)}
+                  disabled={!isAdmin}
+                >
                   <option value="">-- Select a Barangay --</option>
                   {BARANGAYS.map((b) => (
                     <option key={b} value={b}>{b}</option>
                   ))}
                 </Form.Select>
+                {!isAdmin && (
+                  <Form.Text className="text-muted">
+                    Showing records for your barangay: <strong>{userBarangay}</strong>
+                  </Form.Text>
+                )}
               </Form.Group>
             </Col>
-            <Col md={6}>
+            <Col md={4}>
               <Form.Group>
-                <Form.Label>Year</Form.Label>
-                <Form.Select value={year} onChange={(e) => setYear(parseInt(e.target.value))}>
-                  {[2023, 2024, 2025, 2026].map((y) => (
-                    <option key={y} value={y}>{y}</option>
-                  ))}
-                </Form.Select>
+                <Form.Label>Start Date</Form.Label>
+                <Form.Control
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
+              </Form.Group>
+            </Col>
+            <Col md={4}>
+              <Form.Group>
+                <Form.Label>End Date</Form.Label>
+                <Form.Control
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                />
               </Form.Group>
             </Col>
           </Row>
@@ -179,9 +216,10 @@ const CRReport = () => {
 
             <div className="text-center mb-4">
               <h5 className="text-uppercase fw-bold mb-1">
-                CONSOLIDATED REPORT ON WITH & WITHOUT CR {report.year}
+                CONSOLIDATED REPORT ON WITH & WITHOUT CR CY:{report.year}
               </h5>
               <p className="mb-0"><strong>BARANGAY:</strong> {barangay.toUpperCase()}</p>
+              <p className="mb-0"><strong>DATE:</strong> {new Date(report.startDate).toLocaleDateString()} - {new Date(report.endDate).toLocaleDateString()}</p>
             </div>
 
             <Table bordered className="mb-4">

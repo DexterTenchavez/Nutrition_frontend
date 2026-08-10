@@ -9,7 +9,12 @@ import nutritionLogo from '../../assets/nutritionlogo.jpg'
 
 const ChildRecordsReport = () => {
   const { user } = useAuth()
-  const [barangay, setBarangay] = useState('')
+  const isAdmin = user?.role === 'admin'
+  const userBarangay = user?.barangay || ''
+  
+  const [barangay, setBarangay] = useState(isAdmin ? '' : userBarangay)
+  const [startDate, setStartDate] = useState(new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0])
+  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0])
   const [records, setRecords] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -19,16 +24,31 @@ const ChildRecordsReport = () => {
     if (barangay) {
       fetchRecords()
     }
-  }, [barangay])
+  }, [barangay, startDate, endDate])
 
   const fetchRecords = async () => {
     setLoading(true)
     setError('')
     try {
       const data = await childRecordApi.getAll()
-      const filtered = data.filter(r => r.barangay === barangay)
-      setRecords(filtered)
-      generateReport(filtered)
+      
+      // Filter by barangay (if admin) or use user's barangay
+      const barangayFiltered = isAdmin 
+        ? data.filter(r => r.barangay === barangay)
+        : data.filter(r => r.barangay === userBarangay)
+      
+      // Filter by date range
+      const dateFiltered = barangayFiltered.filter(r => {
+        const recordDate = new Date(r.recordedDate)
+        const start = new Date(startDate)
+        const end = new Date(endDate)
+        start.setHours(0, 0, 0, 0)
+        end.setHours(23, 59, 59, 999)
+        return recordDate >= start && recordDate <= end
+      })
+      
+      setRecords(dateFiltered)
+      generateReport(dateFiltered)
     } catch (error) {
       setError('Error fetching records')
     } finally {
@@ -52,7 +72,11 @@ const ChildRecordsReport = () => {
       months12To59: purokReports.reduce((sum, p) => sum + p.months12To59, 0),
       underweightSUW: purokReports.reduce((sum, p) => sum + p.underweightSUW, 0)
     }
-    setReport({ purokReports, total, barangay })
+    const startYear = new Date(startDate).getFullYear()
+    const endYear = new Date(endDate).getFullYear()
+    const yearDisplay = startYear === endYear ? startYear.toString() : `${startYear}-${endYear}`
+    const barangayName = isAdmin ? barangay : userBarangay
+    setReport({ purokReports, total, barangay: barangayName, year: yearDisplay, startDate, endDate })
   }
 
   const handleExportPDF = () => {
@@ -60,8 +84,7 @@ const ChildRecordsReport = () => {
 
     const doc = new jsPDF()
     const pageWidth = doc.internal.pageSize.getWidth()
-    const year = new Date().getFullYear()
-    const barangayName = barangay.toUpperCase()
+    const barangayName = report.barangay.toUpperCase()
 
     const logoImg = new Image()
     logoImg.src = nutritionLogo
@@ -70,10 +93,11 @@ const ChildRecordsReport = () => {
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(14)
     doc.text('CONSOLIDATED REPORT ON GIVEN', pageWidth / 2, 18, { align: 'center' })
-    doc.text(`VITAMIN A SUPPLEMENTARY C.Y. ${year}`, pageWidth / 2, 26, { align: 'center' })
+    doc.text(`VITAMIN A SUPPLEMENTARY CY:${report.year}`, pageWidth / 2, 26, { align: 'center' })
 
     doc.setFontSize(11)
     doc.text(`BARANGAY: ${barangayName}`, 14, 38)
+    doc.text(`DATE: ${new Date(report.startDate).toLocaleDateString()} - ${new Date(report.endDate).toLocaleDateString()}`, 14, 46)
 
     const body = report.purokReports.map((p) => [
       p.purok,
@@ -90,7 +114,7 @@ const ChildRecordsReport = () => {
     ])
 
     autoTable(doc, {
-      startY: 44,
+      startY: 52,
       head: [['PUROK', '6 - 11 MONTHS', '12 - 59 MONTHS', 'UNDERWEIGHT\nAND SUW']],
       body,
       theme: 'grid',
@@ -115,7 +139,7 @@ const ChildRecordsReport = () => {
     doc.text('________________', pageWidth - 45, finalY)
     doc.text('BRGY. CAPTAIN', pageWidth - 45, finalY + 6)
 
-    doc.save(`Vitamin_A_Report_${barangayName}_${year}.pdf`)
+    doc.save(`Vitamin_A_Report_${barangayName}_${report.year}.pdf`)
   }
 
   return (
@@ -125,18 +149,49 @@ const ChildRecordsReport = () => {
       <Card className="mb-4">
         <Card.Body>
           <Row>
-            <Col md={6}>
+            {isAdmin && (
+              <Col md={4}>
+                <Form.Group>
+                  <Form.Label>Select Barangay</Form.Label>
+                  <Form.Select value={barangay} onChange={(e) => setBarangay(e.target.value)}>
+                    <option value="">-- Select a Barangay --</option>
+                    {BARANGAYS.map((b) => (
+                      <option key={b} value={b}>{b}</option>
+                    ))}
+                  </Form.Select>
+                </Form.Group>
+              </Col>
+            )}
+            <Col md={isAdmin ? 4 : 6}>
               <Form.Group>
-                <Form.Label>Select Barangay</Form.Label>
-                <Form.Select value={barangay} onChange={(e) => setBarangay(e.target.value)}>
-                  <option value="">-- Select a Barangay --</option>
-                  {BARANGAYS.map((b) => (
-                    <option key={b} value={b}>{b}</option>
-                  ))}
-                </Form.Select>
+                <Form.Label>Start Date</Form.Label>
+                <Form.Control
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
+              </Form.Group>
+            </Col>
+            <Col md={isAdmin ? 4 : 6}>
+              <Form.Group>
+                <Form.Label>End Date</Form.Label>
+                <Form.Control
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                />
               </Form.Group>
             </Col>
           </Row>
+          {!isAdmin && (
+            <Row className="mt-2">
+              <Col>
+                <Alert variant="info" className="mb-0">
+                  Showing records for <strong>{userBarangay}</strong>
+                </Alert>
+              </Col>
+            </Row>
+          )}
         </Card.Body>
       </Card>
 
@@ -149,7 +204,7 @@ const ChildRecordsReport = () => {
 
       {!loading && error && <Alert variant="danger">{error}</Alert>}
 
-      {!loading && !error && report && barangay && (
+      {!loading && !error && report && (
         <Card className="border-0 shadow-sm">
           <Card.Body>
             <div className="d-flex justify-content-between align-items-center mb-3">
@@ -174,9 +229,10 @@ const ChildRecordsReport = () => {
 
             <div className="text-center mb-4">
               <h5 className="text-uppercase fw-bold mb-1">
-                CONSOLIDATED REPORT ON GIVEN VITAMIN A SUPPLEMENTARY C.Y. {new Date().getFullYear()}
+                CONSOLIDATED REPORT ON GIVEN VITAMIN A SUPPLEMENTARY CY:{report.year}
               </h5>
-              <p className="mb-0"><strong>BARANGAY:</strong> {barangay.toUpperCase()}</p>
+              <p className="mb-0"><strong>BARANGAY:</strong> {report.barangay.toUpperCase()}</p>
+              <p className="mb-0"><strong>DATE:</strong> {new Date(report.startDate).toLocaleDateString()} - {new Date(report.endDate).toLocaleDateString()}</p>
             </div>
 
             <Table bordered className="mb-4">

@@ -39,6 +39,9 @@ const Navbar = () => {
             <Nav.Link as={Link} to="/dashboard" className={isActive('/dashboard') ? 'active' : ''}>
               Dashboard
             </Nav.Link>
+            <Nav.Link as={Link} to="/barangay-report" className={isActive('/barangay-report') ? 'active' : ''}>
+                  Barangay Report
+                </Nav.Link>
             {!isAdmin && (
               <Nav.Link as={Link} to="/staff/child-records" className={location.pathname.startsWith('/staff') ? 'active' : ''}>
                 Data Entry
@@ -46,11 +49,11 @@ const Navbar = () => {
             )}
             {isAdmin && (
               <>
-                <Nav.Link as={Link} to="/barangay-report" className={isActive('/barangay-report') ? 'active' : ''}>
-                  Barangay Report
-                </Nav.Link>
                 <Nav.Link as={Link} to="/overall-report" className={isActive('/overall-report') ? 'active' : ''}>
                   Overall Report
+                </Nav.Link>
+                <Nav.Link as={Link} to="/admin/records" className={isActive('/admin/records') ? 'active' : ''}>
+                  All Records
                 </Nav.Link>
                 <Nav.Link as={Link} to="/admin/staff" className={isActive('/admin/staff') ? 'active' : ''}>
                   Staff Management

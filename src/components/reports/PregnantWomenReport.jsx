@@ -9,7 +9,10 @@ import nutritionLogo from '../../assets/nutritionlogo.jpg'
 
 const PregnantWomenReport = () => {
   const { user } = useAuth()
-  const [barangay, setBarangay] = useState('')
+  const isAdmin = user?.role === 'admin'
+  const userBarangay = user?.barangay || ''
+  
+  const [barangay, setBarangay] = useState(isAdmin ? '' : userBarangay)
   const [startDate, setStartDate] = useState(new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0])
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0])
   const [records, setRecords] = useState([])
@@ -27,32 +30,20 @@ const PregnantWomenReport = () => {
     setLoading(true)
     setError('')
     try {
-      // Fetch all records for the barangay
       const data = await pregnantWomenApi.getByBarangay(barangay, 0)
-      
-      console.log('All records:', data) // Debug log
-      
-      // Filter by date range
-      const start = new Date(startDate)
-      const end = new Date(endDate)
-      start.setHours(0, 0, 0, 0)
-      end.setHours(23, 59, 59, 999)
-      
-      console.log('Start date:', start)
-      console.log('End date:', end)
       
       const filtered = data.filter(r => {
         const recordDate = new Date(r.recordedDate)
-        console.log('Record date:', recordDate, 'Included:', recordDate >= start && recordDate <= end) // Debug log
+        const start = new Date(startDate)
+        const end = new Date(endDate)
+        start.setHours(0, 0, 0, 0)
+        end.setHours(23, 59, 59, 999)
         return recordDate >= start && recordDate <= end
       })
-      
-      console.log('Filtered records:', filtered) // Debug log
       
       setRecords(filtered)
       generateReport(filtered)
     } catch (error) {
-      console.error('Error fetching records:', error)
       setError('Error fetching records')
     } finally {
       setLoading(false)
@@ -154,12 +145,21 @@ const PregnantWomenReport = () => {
             <Col md={4}>
               <Form.Group>
                 <Form.Label>Select Barangay</Form.Label>
-                <Form.Select value={barangay} onChange={(e) => setBarangay(e.target.value)}>
+                <Form.Select 
+                  value={barangay} 
+                  onChange={(e) => setBarangay(e.target.value)}
+                  disabled={!isAdmin}
+                >
                   <option value="">-- Select a Barangay --</option>
                   {BARANGAYS.map((b) => (
                     <option key={b} value={b}>{b}</option>
                   ))}
                 </Form.Select>
+                {!isAdmin && (
+                  <Form.Text className="text-muted">
+                    Showing records for your barangay: <strong>{userBarangay}</strong>
+                  </Form.Text>
+                )}
               </Form.Group>
             </Col>
             <Col md={4}>

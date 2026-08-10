@@ -9,7 +9,10 @@ import nutritionLogo from '../../assets/nutritionlogo.jpg'
 
 const VegetableSeedReport = () => {
   const { user } = useAuth()
-  const [barangay, setBarangay] = useState('')
+  const isAdmin = user?.role === 'admin'
+  const userBarangay = user?.barangay || ''
+  
+  const [barangay, setBarangay] = useState(isAdmin ? '' : userBarangay)
   const [startDate, setStartDate] = useState(new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0])
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0])
   const [records, setRecords] = useState([])
@@ -17,12 +20,10 @@ const VegetableSeedReport = () => {
   const [error, setError] = useState('')
   const [report, setReport] = useState(null)
   
-  // Filter states for the 3 seed type columns
   const [selectedSeed1, setSelectedSeed1] = useState('')
   const [selectedSeed2, setSelectedSeed2] = useState('')
   const [selectedSeed3, setSelectedSeed3] = useState('')
 
-  // Get all unique seed types from records
   const getAllSeedTypes = () => {
     const seedSet = new Set()
     records.forEach(record => {
@@ -48,7 +49,6 @@ const VegetableSeedReport = () => {
 
   useEffect(() => {
     if (records.length > 0) {
-      // Auto-select first 3 seed types if available
       const allSeeds = getAllSeedTypes()
       if (allSeeds.length > 0 && !selectedSeed1) setSelectedSeed1(allSeeds[0])
       if (allSeeds.length > 1 && !selectedSeed2) setSelectedSeed2(allSeeds[1])
@@ -100,7 +100,6 @@ const VegetableSeedReport = () => {
         }
       })
       
-      // Get counts for selected seed types
       const count1 = selectedSeed1 ? (seedCounts[selectedSeed1] || 0) : 0
       const count2 = selectedSeed2 ? (seedCounts[selectedSeed2] || 0) : 0
       const count3 = selectedSeed3 ? (seedCounts[selectedSeed3] || 0) : 0
@@ -141,7 +140,6 @@ const VegetableSeedReport = () => {
     })
   }
 
-  // Re-generate report when seed selections change
   useEffect(() => {
     if (records.length > 0) {
       generateReport(records)
@@ -233,12 +231,21 @@ const VegetableSeedReport = () => {
             <Col md={4}>
               <Form.Group>
                 <Form.Label>Select Barangay</Form.Label>
-                <Form.Select value={barangay} onChange={(e) => setBarangay(e.target.value)}>
+                <Form.Select 
+                  value={barangay} 
+                  onChange={(e) => setBarangay(e.target.value)}
+                  disabled={!isAdmin}
+                >
                   <option value="">-- Select a Barangay --</option>
                   {BARANGAYS.map((b) => (
                     <option key={b} value={b}>{b}</option>
                   ))}
                 </Form.Select>
+                {!isAdmin && (
+                  <Form.Text className="text-muted">
+                    Showing records for your barangay: <strong>{userBarangay}</strong>
+                  </Form.Text>
+                )}
               </Form.Group>
             </Col>
             <Col md={4}>

@@ -9,7 +9,10 @@ import nutritionLogo from '../../assets/nutritionlogo.jpg'
 
 const AnimalRaisingReport = () => {
   const { user } = useAuth()
-  const [barangay, setBarangay] = useState('')
+  const isAdmin = user?.role === 'admin'
+  const userBarangay = user?.barangay || ''
+  
+  const [barangay, setBarangay] = useState(isAdmin ? '' : userBarangay)
   const [startDate, setStartDate] = useState(new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0])
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0])
   const [records, setRecords] = useState([])
@@ -27,10 +30,8 @@ const AnimalRaisingReport = () => {
     setLoading(true)
     setError('')
     try {
-      // Fetch all records for the barangay (year = 0 means all)
       const data = await animalRaisingApi.getByBarangay(barangay, 0)
       
-      // Filter by date range
       const filtered = data.filter(r => {
         const recordDate = new Date(r.recordedDate)
         const start = new Date(startDate)
@@ -167,12 +168,21 @@ const AnimalRaisingReport = () => {
             <Col md={4}>
               <Form.Group>
                 <Form.Label>Select Barangay</Form.Label>
-                <Form.Select value={barangay} onChange={(e) => setBarangay(e.target.value)}>
+                <Form.Select 
+                  value={barangay} 
+                  onChange={(e) => setBarangay(e.target.value)}
+                  disabled={!isAdmin}
+                >
                   <option value="">-- Select a Barangay --</option>
                   {BARANGAYS.map((b) => (
                     <option key={b} value={b}>{b}</option>
                   ))}
                 </Form.Select>
+                {!isAdmin && (
+                  <Form.Text className="text-muted">
+                    Showing records for your barangay: <strong>{userBarangay}</strong>
+                  </Form.Text>
+                )}
               </Form.Group>
             </Col>
             <Col md={4}>
