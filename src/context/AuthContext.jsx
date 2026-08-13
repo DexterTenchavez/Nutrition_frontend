@@ -1,7 +1,6 @@
 import React, { createContext, useState, useEffect, useContext } from 'react'
 import { authApi } from '../api/auth'
 
-// ✅ EXPORT AuthContext
 export const AuthContext = createContext()
 
 export const AuthProvider = ({ children }) => {
@@ -32,9 +31,23 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('user', JSON.stringify(data))
       return { success: true, data }
     } catch (error) {
+      // Just return the error, don't set any state here
+      const status = error.response?.status
+      const retryAfter = error.response?.data?.retryAfter
+      const message = error.response?.data?.message || error.message || 'Login failed'
+      
+      let errorMessage = message
+      if (status === 401) {
+        errorMessage = 'Invalid username or password. Please try again.'
+      } else if (status === 429) {
+        errorMessage = 'Too many login attempts. Please try again later.'
+      }
+      
       return { 
         success: false, 
-        error: error.response?.data?.message || 'Login failed' 
+        error: errorMessage,
+        status: status || 500,
+        retryAfter: retryAfter || (status === 429 ? 300 : null)
       }
     }
   }

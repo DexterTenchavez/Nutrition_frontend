@@ -187,6 +187,62 @@ const AllRecords = () => {
     return colors[type] || '#858796'
   }
 
+  const formatSeedTypes = (seedData) => {
+    if (!seedData) return '-'
+    try {
+      let seeds = seedData
+      if (typeof seeds === 'string') {
+        seeds = JSON.parse(seeds)
+      }
+      if (Array.isArray(seeds)) {
+        const seedSummary = {}
+        seeds.forEach(s => {
+          if (s.type) {
+            const type = s.type.charAt(0).toUpperCase() + s.type.slice(1)
+            if (!seedSummary[type]) seedSummary[type] = 0
+            seedSummary[type] += s.count || 1
+          }
+        })
+        return Object.entries(seedSummary)
+          .map(([type, count]) => `${type} (${count})`)
+          .join(', ')
+      }
+      return seedData
+    } catch (e) {
+      return seedData
+    }
+  }
+
+  const getIodizedSaltDetails = (record) => {
+    const details = []
+    if (record.fineSaltFidel || record.fineSaltUFC || record.fineSaltPacificBay || record.fineSaltOthers) {
+      const fine = []
+      if (record.fineSaltFidel) fine.push('Fidel')
+      if (record.fineSaltUFC) fine.push('UFC')
+      if (record.fineSaltPacificBay) fine.push('Pacific Bay')
+      if (record.fineSaltOthers) fine.push(record.fineSaltOthers)
+      details.push(`Fine: ${fine.join(', ')}`)
+    }
+    if (record.rockSaltAtlantic || record.rockSaltFidel || record.rockSaltLasap || record.rockSaltPagAsa || record.rockSaltJay || record.rockSaltOthers) {
+      const rock = []
+      if (record.rockSaltAtlantic) rock.push('Atlantic')
+      if (record.rockSaltFidel) rock.push('Fidel')
+      if (record.rockSaltLasap) rock.push('Lasap')
+      if (record.rockSaltPagAsa) rock.push('Pag-Asa')
+      if (record.rockSaltJay) rock.push('Jay')
+      if (record.rockSaltOthers) rock.push(record.rockSaltOthers)
+      details.push(`Rock: ${rock.join(', ')}`)
+    }
+    if (record.oilUFC || record.oilJolly || record.oilOthers) {
+      const oil = []
+      if (record.oilUFC) oil.push('UFC')
+      if (record.oilJolly) oil.push('Jolly')
+      if (record.oilOthers) oil.push(record.oilOthers)
+      details.push(`Oil: ${oil.join(', ')}`)
+    }
+    return details.length > 0 ? details.join(' | ') : '-'
+  }
+
   const renderRecordRow = (record, index) => {
     const typeColor = getTypeColor(record._type)
 
@@ -205,6 +261,16 @@ const AllRecords = () => {
               <span className="badge bg-light text-dark border">
                 🐐 {record.goatMale || 0}M / {record.goatFemale || 0}F
               </span>
+              {record._type === 'Animal Raising' && (
+                <>
+                  <span className="badge bg-light text-dark border">
+                    🐄 {record.cowMale || 0}M / {record.cowFemale || 0}F
+                  </span>
+                  <span className="badge bg-light text-dark border">
+                    🐃 {record.carabaoMale || 0}M / {record.carabaoFemale || 0}F
+                  </span>
+                </>
+              )}
             </div>
           )
         case 'Potable Water':
@@ -217,10 +283,8 @@ const AllRecords = () => {
           )
         case 'Iodized Salt':
           return (
-            <div>
-              <span className="badge bg-light text-dark border me-1">
-                Fine: {record.fineSaltFidel ? 'Fidel ' : ''}{record.fineSaltUFC ? 'UFC ' : ''}{record.fineSaltPacificBay ? 'Pacific Bay ' : ''}{record.fineSaltOthers || ''}
-              </span>
+            <div className="text-start" style={{ fontSize: '0.8rem' }}>
+              {getIodizedSaltDetails(record)}
             </div>
           )
         case 'CR':
@@ -240,15 +304,18 @@ const AllRecords = () => {
             <div className="d-flex gap-2 flex-wrap align-items-center">
               <span className="badge bg-light text-dark border">{record.weight || '-'} kg</span>
               <span className="badge bg-light text-dark border">{record.height || '-'} cm</span>
-              <Badge bg={record.bmiCategory === 'Normal BMI' ? 'success' : 
-                        record.bmiCategory === 'Low BMI' ? 'warning' : 'danger'}>
+              <Badge bg={record.bmiCategory === 'Normal BMI' || record.bmiCategory === 'Normal' ? 'success' : 
+                        record.bmiCategory === 'Low BMI' || record.bmiCategory === 'Underweight' ? 'warning' : 
+                        record.bmiCategory === 'High BMI' || record.bmiCategory === 'Overweight' ? 'danger' : 'secondary'}>
                 {record.bmiCategory || '-'}
               </Badge>
             </div>
           )
         case 'Vegetable Seeds':
           return (
-            <span className="text-muted">{record.seedTypes || '-'}</span>
+            <span className="text-muted" style={{ fontSize: '0.8rem' }}>
+              {formatSeedTypes(record.seedTypes)}
+            </span>
           )
         default:
           return <span className="text-muted">-</span>
@@ -315,14 +382,24 @@ const AllRecords = () => {
     doc.setFontSize(10)
     doc.text(`Generated: ${new Date().toLocaleString()}`, pageWidth / 2, 22, { align: 'center' })
     
-    const exportData = current.map((record, i) => [
-      i + 1,
-      record._type || '',
-      record.barangay || '',
-      `Purok ${record.purok || ''}`,
-      record.womanName || record.householdName || record.storeName || record.fullName || '-',
-      '...'
-    ])
+    const exportData = current.map((record, i) => {
+      let details = ''
+      if (record._type === 'Iodized Salt') {
+        details = getIodizedSaltDetails(record)
+      } else if (record._type === 'Vegetable Seeds') {
+        details = formatSeedTypes(record.seedTypes)
+      } else {
+        details = '...'
+      }
+      return [
+        i + 1,
+        record._type || '',
+        record.barangay || '',
+        `Purok ${record.purok || ''}`,
+        record.womanName || record.householdName || record.storeName || record.fullName || '-',
+        details
+      ]
+    })
     
     autoTable(doc, {
       startY: 30,

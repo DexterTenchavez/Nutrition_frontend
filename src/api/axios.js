@@ -23,18 +23,22 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 )
 
-// Auto-handle 401 errors
+// Auto-handle 401 errors - but NOT for login requests
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    // Check if this is a login request
+    const isLoginRequest = error.config?.url?.includes('/auth/login')
+    
+    // Only redirect on 401 if it's NOT a login request
+    if (error.response?.status === 401 && !isLoginRequest) {
       localStorage.removeItem('token')
       localStorage.removeItem('user')
       window.location.href = '/login'
     }
+    
     return Promise.reject(error)
   }
 )
 
-// ✅ ADD THIS - Default export
 export default api

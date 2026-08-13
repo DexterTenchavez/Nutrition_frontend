@@ -19,6 +19,11 @@ const BackyardGardeningReport = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [report, setReport] = useState(null)
+  
+  const [certifiedName, setCertifiedName] = useState('')
+  const [certifiedPosition, setCertifiedPosition] = useState('BNS')
+  const [approvedName, setApprovedName] = useState('')
+  const [approvedPosition, setApprovedPosition] = useState('BRGY. CAPTAIN')
 
   useEffect(() => {
     if (barangay) {
@@ -119,14 +124,14 @@ const BackyardGardeningReport = () => {
     doc.setFont('helvetica', 'bold')
     doc.text('CERTIFIED CORRECT:', 14, finalY)
     doc.setFont('helvetica', 'normal')
-    doc.text('________________', 60, finalY)
-    doc.text('BNS', 65, finalY + 6)
+    doc.text(certifiedName || '________________', 60, finalY)
+    doc.text(certifiedPosition || 'BNS', 65, finalY + 6)
 
     doc.setFont('helvetica', 'bold')
     doc.text('APPROVED BY:', pageWidth - 80, finalY)
     doc.setFont('helvetica', 'normal')
-    doc.text('________________', pageWidth - 45, finalY)
-    doc.text('BRGY. CAPTAIN', pageWidth - 45, finalY + 6)
+    doc.text(approvedName || '________________', pageWidth - 45, finalY)
+    doc.text(approvedPosition || 'BRGY. CAPTAIN', pageWidth - 45, finalY + 6)
 
     doc.save(`Backyard_Gardening_Report_${barangayName}_${report.year}.pdf`)
   }
@@ -246,16 +251,80 @@ const BackyardGardeningReport = () => {
               </tbody>
             </Table>
 
-            <div className="row mt-4">
-              <div className="col-6">
-                <strong>CERTIFIED CORRECT:</strong> ________________<br />
-                <span className="ms-4">BNS</span>
-              </div>
-              <div className="col-6 text-end">
-                <strong>APPROVED BY:</strong> ________________<br />
-                <span className="me-4">BRGY. CAPTAIN</span>
-              </div>
-            </div>
+            <Row className="mt-4">
+              <Col md={6}>
+                <div className="d-flex align-items-center gap-2 mb-1">
+                  <img 
+                    src={nutritionLogo} 
+                    alt="Logo" 
+                    style={{ 
+                      width: '25px', 
+                      height: '25px', 
+                      objectFit: 'cover',
+                      borderRadius: '50%',
+                      border: '1px solid #198754'
+                    }} 
+                  />
+                  <strong>CERTIFIED CORRECT:</strong>
+                </div>
+                <Row>
+                  <Col md={6}>
+                    <Form.Control
+                      type="text"
+                      placeholder="Name"
+                      value={certifiedName}
+                      onChange={(e) => setCertifiedName(e.target.value)}
+                      size="sm"
+                    />
+                  </Col>
+                  <Col md={6}>
+                    <Form.Control
+                      type="text"
+                      placeholder="Position"
+                      value={certifiedPosition}
+                      onChange={(e) => setCertifiedPosition(e.target.value)}
+                      size="sm"
+                    />
+                  </Col>
+                </Row>
+              </Col>
+              <Col md={6}>
+                <div className="d-flex align-items-center gap-2 mb-1">
+                  <img 
+                    src={nutritionLogo} 
+                    alt="Logo" 
+                    style={{ 
+                      width: '25px', 
+                      height: '25px', 
+                      objectFit: 'cover',
+                      borderRadius: '50%',
+                      border: '1px solid #198754'
+                    }} 
+                  />
+                  <strong>APPROVED BY:</strong>
+                </div>
+                <Row>
+                  <Col md={6}>
+                    <Form.Control
+                      type="text"
+                      placeholder="Name"
+                      value={approvedName}
+                      onChange={(e) => setApprovedName(e.target.value)}
+                      size="sm"
+                    />
+                  </Col>
+                  <Col md={6}>
+                    <Form.Control
+                      type="text"
+                      placeholder="Position"
+                      value={approvedPosition}
+                      onChange={(e) => setApprovedPosition(e.target.value)}
+                      size="sm"
+                    />
+                  </Col>
+                </Row>
+              </Col>
+            </Row>
           </Card.Body>
         </Card>
       )}

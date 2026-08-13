@@ -12,16 +12,18 @@ const Login = () => {
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [debugInfo, setDebugInfo] = useState(null)
   const [logoFailed, setLogoFailed] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [retryAfter, setRetryAfter] = useState(null)
   const { login } = useAuth()
   const navigate = useNavigate()
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    
+    if (loading || retryAfter) return
+    
     setError('')
-    setDebugInfo(null)
     setLoading(true)
 
     try {
@@ -29,24 +31,30 @@ const Login = () => {
 
       if (result.success) {
         navigate('/dashboard')
-      } else {
-        setError(result.error)
-        setDebugInfo({
-          error: result.error,
-          timestamp: new Date().toISOString(),
-          apiUrl: import.meta.env.VITE_API_URL || 'http://localhost:5000'
-        })
+        return
       }
+
+      if (result.status === 429) {
+        setRetryAfter(result.retryAfter || 300)
+        setError('Too many login attempts. Please try again later.')
+      } else if (result.status === 401) {
+        setError('Invalid username or password. Please try again.')
+      } else {
+        setError(result.error || 'Login failed. Please try again.')
+      }
+
     } catch (error) {
-      setError('An unexpected error occurred. Check console for details.')
-      setDebugInfo({
-        error: error.message,
-        stack: error.stack,
-        timestamp: new Date().toISOString()
-      })
+      console.error('Login error:', error)
+      setError('An unexpected error occurred. Please try again.')
     } finally {
       setLoading(false)
     }
+  }
+
+  const formatRetryTime = (seconds) => {
+    if (seconds < 60) return `${seconds} seconds`
+    const minutes = Math.ceil(seconds / 60)
+    return `${minutes} minute${minutes > 1 ? 's' : ''}`
   }
 
   return (
@@ -100,14 +108,23 @@ const Login = () => {
           <h2 className="login-title">Welcome back</h2>
           <p className="login-subtitle">Nutrition Management Portal</p>
 
-          {error && <Alert variant="danger">{error}</Alert>}
+          {error && (
+            <Alert 
+              variant={retryAfter ? 'warning' : 'danger'} 
+              className="mb-3"
+              dismissible
+              onClose={() => setError('')}
+            >
+              {error}
+            </Alert>
+          )}
 
-          {debugInfo && (
-            <Alert variant="info" className="mt-2" style={{ fontSize: '12px' }}>
-              <strong>Debug Info:</strong>
-              <pre className="mb-0 mt-1" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
-                {JSON.stringify(debugInfo, null, 2)}
-              </pre>
+          {retryAfter && (
+            <Alert variant="info" className="mb-3">
+              <strong>⏳ Rate Limit Exceeded</strong>
+              <p className="mb-0 mt-1">
+                Please try again in <strong>{formatRetryTime(retryAfter)}</strong>.
+              </p>
             </Alert>
           )}
 
@@ -120,6 +137,7 @@ const Login = () => {
                 onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                 required
                 placeholder="name@example.com"
+                disabled={!!retryAfter}
               />
             </Form.Group>
 
@@ -132,12 +150,14 @@ const Login = () => {
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   required
                   placeholder="Enter your password"
+                  disabled={!!retryAfter}
                 />
                 <Button
                   variant="link"
                   className="password-toggle-btn"
                   onClick={() => setShowPassword(!showPassword)}
                   tabIndex="-1"
+                  disabled={!!retryAfter}
                 >
                   {showPassword ? (
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -161,7 +181,7 @@ const Login = () => {
             <Button
               type="submit"
               className="w-100 login-submit-btn"
-              disabled={loading}
+              disabled={loading || !!retryAfter}
             >
               {loading ? 'Logging in...' : 'Login'}
             </Button>

@@ -10,8 +10,14 @@ const OverallIodizedSaltReport = () => {
   const [report, setReport] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [startDate, setStartDate] = useState(new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0])
-  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0])
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+  
+  // Signature fields
+  const [preparedName, setPreparedName] = useState('')
+  const [preparedPosition, setPreparedPosition] = useState('MNPC')
+  const [notedName, setNotedName] = useState('')
+  const [notedPosition, setNotedPosition] = useState('RN')
 
   useEffect(() => {
     fetchOverallReport()
@@ -23,14 +29,17 @@ const OverallIodizedSaltReport = () => {
     try {
       const allRecords = await iodizedSaltApi.getAll()
       
-      const dateFiltered = allRecords.filter(r => {
-        const recordDate = new Date(r.recordedDate)
-        const start = new Date(startDate)
-        const end = new Date(endDate)
-        start.setHours(0, 0, 0, 0)
-        end.setHours(23, 59, 59, 999)
-        return recordDate >= start && recordDate <= end
-      })
+      let dateFiltered = allRecords
+      if (startDate && endDate) {
+        dateFiltered = allRecords.filter(r => {
+          const recordDate = new Date(r.recordedDate)
+          const start = new Date(startDate)
+          const end = new Date(endDate)
+          start.setHours(0, 0, 0, 0)
+          end.setHours(23, 59, 59, 999)
+          return recordDate >= start && recordDate <= end
+        })
+      }
       
       const barangays = [...new Set(dateFiltered.map(r => r.barangay))].sort()
       const barangayReports = barangays.map(barangay => {
@@ -57,8 +66,10 @@ const OverallIodizedSaltReport = () => {
         overallTotal,
         startDate,
         endDate,
-        preparedBy: 'Cristine A. Macahis, MNPC',
-        notedBy: 'Jehd Stephen O. Cutamora, RN'
+        preparedBy: preparedName || 'Cristine A. Macahis',
+        preparedPosition: preparedPosition || 'MNPC',
+        notedBy: notedName || 'Jehd Stephen O. Cutamora',
+        notedPosition: notedPosition || 'RN'
       })
     } catch (error) {
       setError(error.response?.data?.message || 'Error fetching report')
@@ -68,6 +79,7 @@ const OverallIodizedSaltReport = () => {
   }
 
   const getYearDisplay = () => {
+    if (!startDate || !endDate) return 'All Records'
     const startYear = new Date(startDate).getFullYear()
     const endYear = new Date(endDate).getFullYear()
     return startYear === endYear ? startYear.toString() : `${startYear}-${endYear}`
@@ -92,10 +104,14 @@ const OverallIodizedSaltReport = () => {
     doc.text('MUNICIPAL NUTRITION COUNCIL', pageWidth / 2, 32, { align: 'center' })
 
     doc.setFontSize(15)
-    doc.text(`IODIZED SALT OVERALL REPORT CY:${yearDisplay}`, pageWidth / 2, 42, { align: 'center' })
+    doc.text(`IODIZED SALT OVERALL REPORT ${yearDisplay}`, pageWidth / 2, 42, { align: 'center' })
 
-    doc.setFontSize(10)
-    doc.text(`DATE: ${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}`, pageWidth / 2, 48, { align: 'center' })
+    let startY = 48
+    if (startDate && endDate) {
+      doc.setFontSize(10)
+      doc.text(`DATE: ${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}`, pageWidth / 2, 48, { align: 'center' })
+      startY = 54
+    }
 
     const body = (report.barangays || []).map((b, i) => [
       i + 1,
@@ -115,7 +131,7 @@ const OverallIodizedSaltReport = () => {
     ])
 
     autoTable(doc, {
-      startY: 54,
+      startY: startY,
       head: [['#', 'BARANGAY', 'STORES', 'FINE SALT', 'ROCK SALT', 'OIL']],
       body,
       theme: 'grid',
@@ -133,11 +149,15 @@ const OverallIodizedSaltReport = () => {
     doc.setFontSize(10)
     doc.setFont('helvetica', 'bold')
     doc.text('PREPARED BY:', 14, finalY)
-    doc.text('NOTED BY:', pageWidth - 80, finalY)
-
     doc.setFont('helvetica', 'normal')
-    doc.text(report.preparedBy || 'Cristine A. Macahis, MNPC', 14, finalY + 12)
-    doc.text(report.notedBy || 'Jehd Stephen O. Cutamora, RN', pageWidth - 80, finalY + 12)
+    doc.text(report.preparedBy || '________________', 60, finalY)
+    doc.text(report.preparedPosition || 'MNPC', 65, finalY + 6)
+
+    doc.setFont('helvetica', 'bold')
+    doc.text('NOTED BY:', pageWidth - 80, finalY)
+    doc.setFont('helvetica', 'normal')
+    doc.text(report.notedBy || '________________', pageWidth - 45, finalY)
+    doc.text(report.notedPosition || 'RN', pageWidth - 45, finalY + 6)
 
     doc.save(`Overall_IodizedSalt_Report_${yearDisplay}.pdf`)
   }
@@ -163,7 +183,7 @@ const OverallIodizedSaltReport = () => {
   if (!report || report.barangays.length === 0) {
     return (
       <div className="text-center py-5">
-        <Alert variant="info">No records found for the selected date range.</Alert>
+        <Alert variant="info">No records found.</Alert>
       </div>
     )
   }
@@ -177,12 +197,17 @@ const OverallIodizedSaltReport = () => {
           <img src={nutritionLogo} alt="Logo" style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '50%', border: '2px solid #198754' }} />
           <div>
             <h1 className="mb-0">Iodized Salt Overall Report</h1>
-            <small className="text-muted">CY: {yearDisplay}</small>
+            <small className="text-muted">{yearDisplay}</small>
           </div>
         </div>
         <div className="d-flex gap-2 flex-wrap">
           <Form.Control type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={{ width: '150px' }} />
           <Form.Control type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} style={{ width: '150px' }} />
+          {(startDate || endDate) && (
+            <Button variant="outline-secondary" onClick={() => { setStartDate(''); setEndDate(''); }}>
+              Clear Dates
+            </Button>
+          )}
           <Button variant="success" onClick={handleExportPDF}>
             <i className="bi bi-file-pdf-fill me-2"></i>Export PDF
           </Button>
@@ -230,8 +255,10 @@ const OverallIodizedSaltReport = () => {
             <img src={nutritionLogo} alt="Logo" style={{ width: '35px', height: '35px', objectFit: 'cover', borderRadius: '50%', border: '2px solid #198754' }} />
             <div>
               <div className="fw-bold">MUNICIPAL NUTRITION COUNCIL</div>
-              <div className="fw-bold fs-5 text-success">IODIZED SALT OVERALL REPORT CY: {yearDisplay}</div>
-              <div className="text-muted small">{new Date(startDate).toLocaleDateString()} - {new Date(endDate).toLocaleDateString()}</div>
+              <div className="fw-bold fs-5 text-success">IODIZED SALT OVERALL REPORT {yearDisplay}</div>
+              {startDate && endDate && (
+                <div className="text-muted small">{new Date(startDate).toLocaleDateString()} - {new Date(endDate).toLocaleDateString()}</div>
+              )}
             </div>
           </div>
         </Card.Header>
@@ -276,14 +303,52 @@ const OverallIodizedSaltReport = () => {
             <img src={nutritionLogo} alt="Logo" style={{ width: '25px', height: '25px', objectFit: 'cover', borderRadius: '50%', border: '1px solid #198754' }} />
             <p className="fw-bold mb-0">PREPARED BY:</p>
           </div>
-          <p>{report.preparedBy || 'Cristine A. Macahis, MNPC'}</p>
+          <Row>
+            <Col md={6}>
+              <Form.Control
+                type="text"
+                placeholder="Name"
+                value={preparedName}
+                onChange={(e) => setPreparedName(e.target.value)}
+                size="sm"
+              />
+            </Col>
+            <Col md={6}>
+              <Form.Control
+                type="text"
+                placeholder="Position"
+                value={preparedPosition}
+                onChange={(e) => setPreparedPosition(e.target.value)}
+                size="sm"
+              />
+            </Col>
+          </Row>
         </Col>
         <Col md={6}>
           <div className="d-flex align-items-center gap-2 mb-1">
             <img src={nutritionLogo} alt="Logo" style={{ width: '25px', height: '25px', objectFit: 'cover', borderRadius: '50%', border: '1px solid #198754' }} />
             <p className="fw-bold mb-0">NOTED BY:</p>
           </div>
-          <p>{report.notedBy || 'Jehd Stephen O. Cutamora, RN'}</p>
+          <Row>
+            <Col md={6}>
+              <Form.Control
+                type="text"
+                placeholder="Name"
+                value={notedName}
+                onChange={(e) => setNotedName(e.target.value)}
+                size="sm"
+              />
+            </Col>
+            <Col md={6}>
+              <Form.Control
+                type="text"
+                placeholder="Position"
+                value={notedPosition}
+                onChange={(e) => setNotedPosition(e.target.value)}
+                size="sm"
+              />
+            </Col>
+          </Row>
         </Col>
       </Row>
     </div>

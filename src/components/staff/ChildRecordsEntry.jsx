@@ -15,6 +15,7 @@ const ChildRecordsEntry = () => {
     purok: '',
     targetCategory: 'Child (0–59 months)',
     fullName: '',
+    birthdate: '',
     ageMonths: '',
     weight: '',
     height: '',
@@ -29,11 +30,9 @@ const ChildRecordsEntry = () => {
   const [editingId, setEditingId] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
   
-  // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
   const [recordsPerPage, setRecordsPerPage] = useState(15)
   
-  // Filter state
   const [filters, setFilters] = useState({
     purok: '',
     nutritionalStatus: '',
@@ -57,7 +56,6 @@ const ChildRecordsEntry = () => {
   const fetchRecords = async () => {
     try {
       const data = await childRecordApi.getAll()
-      // Filter by barangay if user is not admin
       const filteredData = isAdmin ? data : data.filter(r => r.barangay === userBarangay)
       setRecords(filteredData)
       setFilteredRecords(filteredData)
@@ -69,7 +67,6 @@ const ChildRecordsEntry = () => {
   const applyFiltersAndSearch = () => {
     let filtered = [...records]
 
-    // Search by name only
     if (searchTerm.trim()) {
       const search = searchTerm.toLowerCase().trim()
       filtered = filtered.filter(record => 
@@ -77,7 +74,6 @@ const ChildRecordsEntry = () => {
       )
     }
 
-    // Apply filters
     if (filters.purok) {
       filtered = filtered.filter(record => record.purok === parseInt(filters.purok))
     }
@@ -114,16 +110,55 @@ const ChildRecordsEntry = () => {
     setCurrentPage(1)
   }
 
-  // Get current records for pagination
+  // Calculate age in months from birthdate to recorded date
+  const calculateAge = (birthdate, recordedDate) => {
+    if (!birthdate || !recordedDate) return ''
+    const birth = new Date(birthdate)
+    const recorded = new Date(recordedDate)
+    
+    if (birth > recorded) return ''
+    
+    let years = recorded.getFullYear() - birth.getFullYear()
+    let months = recorded.getMonth() - birth.getMonth()
+    
+    if (months < 0) {
+      years--
+      months += 12
+    }
+    
+    const totalMonths = (years * 12) + months
+    
+    // Handle day adjustment
+    const birthDay = birth.getDate()
+    const recordedDay = recorded.getDate()
+    if (recordedDay < birthDay) {
+      return totalMonths - 1
+    }
+    
+    return totalMonths
+  }
+
+  // Auto-calculate age when birthdate or recorded date changes
+  const handleDateChange = (field, value) => {
+    const updatedForm = { ...formData, [field]: value }
+    
+    if (field === 'birthdate' || field === 'recordedDate') {
+      const age = calculateAge(updatedForm.birthdate, updatedForm.recordedDate)
+      if (age !== '' && age !== null && age !== undefined) {
+        updatedForm.ageMonths = age.toString()
+      }
+    }
+    
+    setFormData(updatedForm)
+  }
+
   const indexOfLastRecord = currentPage * recordsPerPage
   const indexOfFirstRecord = indexOfLastRecord - recordsPerPage
   const currentRecords = filteredRecords.slice(indexOfFirstRecord, indexOfLastRecord)
   const totalPages = Math.ceil(filteredRecords.length / recordsPerPage)
 
-  // Change page
   const paginate = (pageNumber) => setCurrentPage(pageNumber)
 
-  // Next/Previous page
   const nextPage = () => {
     if (currentPage < totalPages) {
       setCurrentPage(currentPage + 1)
@@ -136,7 +171,6 @@ const ChildRecordsEntry = () => {
     }
   }
 
-  // Handle page size change
   const handlePageSizeChange = (e) => {
     const newSize = parseInt(e.target.value)
     setRecordsPerPage(newSize)
@@ -159,12 +193,10 @@ const ChildRecordsEntry = () => {
     setLoading(true)
 
     try {
-      // Validate that values are not negative
       const ageMonths = parseInt(formData.ageMonths)
       const weight = parseFloat(formData.weight)
       const height = parseFloat(formData.height)
 
-      // Validate age is between 6 and 59 months
       if (ageMonths < 6 || ageMonths > 59) {
         setError('Age must be between 6 and 59 months')
         setLoading(false)
@@ -183,7 +215,6 @@ const ChildRecordsEntry = () => {
         return
       }
 
-      // Check for duplicate child
       const isDuplicate = checkDuplicateChild(
         formData.fullName,
         formData.barangay,
@@ -203,7 +234,7 @@ const ChildRecordsEntry = () => {
         ageMonths: ageMonths,
         weight: weight,
         height: height,
-        recordedDate: formData.recordedDate || new Date().toISOString().split('T')[0],
+        recordedDate: formData.recordedDate,
       }
 
       if (editingId) {
@@ -219,6 +250,7 @@ const ChildRecordsEntry = () => {
         purok: '',
         targetCategory: 'Child (0–59 months)',
         fullName: '',
+        birthdate: '',
         ageMonths: '',
         weight: '',
         height: '',
@@ -241,6 +273,7 @@ const ChildRecordsEntry = () => {
       purok: record.purok,
       targetCategory: record.targetCategory,
       fullName: record.fullName,
+      birthdate: record.birthdate ? record.birthdate.split('T')[0] : '',
       ageMonths: record.ageMonths,
       weight: record.weight,
       height: record.height,
@@ -260,20 +293,6 @@ const ChildRecordsEntry = () => {
     }
   }
 
-  // Helper function to prevent negative values and restrict age range
-  const handleAgeInput = (e) => {
-    const value = e.target.value
-    if (value === '') {
-      setFormData({ ...formData, ageMonths: '' })
-      return
-    }
-    const numValue = parseInt(value)
-    if (numValue >= 0) {
-      setFormData({ ...formData, ageMonths: value })
-    }
-  }
-
-  // Helper function to prevent negative values for weight and height
   const handleNonNegativeInput = (e, field) => {
     const value = e.target.value
     if (value === '' || parseFloat(value) >= 0) {
@@ -304,7 +323,6 @@ const ChildRecordsEntry = () => {
     setFilters({ ...filters, [field]: value })
   }
 
-  // Render pagination items
   const renderPagination = () => {
     let items = []
     const maxVisible = 5
@@ -405,7 +423,7 @@ const ChildRecordsEntry = () => {
                   <Form.Control
                     type="date"
                     value={formData.recordedDate}
-                    onChange={(e) => setFormData({ ...formData, recordedDate: e.target.value })}
+                    onChange={(e) => handleDateChange('recordedDate', e.target.value)}
                     required
                   />
                 </Form.Group>
@@ -427,29 +445,32 @@ const ChildRecordsEntry = () => {
               </Col>
               <Col md={6}>
                 <Form.Group className="mb-3">
-                  <Form.Label>Age (Months) - 6 to 59 only</Form.Label>
+                  <Form.Label>Birthdate</Form.Label>
                   <Form.Control
-                    type="number"
-                    min="6"
-                    max="59"
-                    value={formData.ageMonths}
-                    onChange={handleAgeInput}
+                    type="date"
+                    value={formData.birthdate}
+                    onChange={(e) => handleDateChange('birthdate', e.target.value)}
                     required
-                    placeholder="e.g., 24"
-                    onKeyDown={(e) => {
-                      if (e.key === '-' || e.key === 'e') {
-                        e.preventDefault()
-                      }
-                    }}
                   />
                   <Form.Text className="text-muted">
-                    Age must be between 6 and 59 months
+                    Age will be calculated automatically
                   </Form.Text>
                 </Form.Group>
               </Col>
             </Row>
 
             <Row>
+              <Col md={4}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Age (Months) - Auto-calculated</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={formData.ageMonths || 'Auto-calculated'}
+                    readOnly
+                    disabled
+                  />
+                </Form.Group>
+              </Col>
               <Col md={4}>
                 <Form.Group className="mb-3">
                   <Form.Label>Weight (KG)</Form.Label>
@@ -488,6 +509,9 @@ const ChildRecordsEntry = () => {
                   />
                 </Form.Group>
               </Col>
+            </Row>
+
+            <Row>
               <Col md={4}>
                 <Form.Group className="mb-3">
                   <Form.Label>Nutritional Status</Form.Label>
@@ -516,6 +540,7 @@ const ChildRecordsEntry = () => {
                   purok: '',
                   targetCategory: 'Child (0–59 months)',
                   fullName: '',
+                  birthdate: '',
                   ageMonths: '',
                   weight: '',
                   height: '',
@@ -573,7 +598,6 @@ const ChildRecordsEntry = () => {
           </Row>
         </Card.Header>
         
-        {/* Filter Section */}
         {showFilters && (
           <Card.Body className="bg-light border-bottom">
             <Row>
@@ -696,6 +720,7 @@ const ChildRecordsEntry = () => {
                 <th>#</th>
                 <th>Purok</th>
                 <th>Name</th>
+                <th>Birthdate</th>
                 <th>Age (mos)</th>
                 <th>Weight</th>
                 <th>Height</th>
@@ -707,7 +732,7 @@ const ChildRecordsEntry = () => {
             <tbody>
               {currentRecords.length === 0 ? (
                 <tr>
-                  <td colSpan="9" className="text-center py-3 text-muted">
+                  <td colSpan="10" className="text-center py-3 text-muted">
                     {searchTerm || Object.values(filters).some(v => v) 
                       ? 'No records found matching your filters' 
                       : 'No records found'}
@@ -719,6 +744,7 @@ const ChildRecordsEntry = () => {
                     <td>{indexOfFirstRecord + index + 1}</td>
                     <td>Purok {record.purok}</td>
                     <td>{record.fullName}</td>
+                    <td>{record.birthdate ? new Date(record.birthdate).toLocaleDateString() : 'N/A'}</td>
                     <td>{record.ageMonths}</td>
                     <td>{record.weight} kg</td>
                     <td>{record.height} cm</td>
@@ -747,7 +773,6 @@ const ChildRecordsEntry = () => {
           </Table>
         </Card.Body>
         
-        {/* Pagination Footer */}
         {filteredRecords.length > 0 && (
           <Card.Footer>
             <Row className="align-items-center">
