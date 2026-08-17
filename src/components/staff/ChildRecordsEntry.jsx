@@ -374,7 +374,7 @@ const ChildRecordsEntry = () => {
 
   return (
     <div>
-      <h4 className="mb-4">Child Records (6-59 months)</h4>
+      <h4 className="mb-4">Vitamin A Records</h4>
 
       <Card className="mb-4">
         <Card.Header>

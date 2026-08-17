@@ -271,7 +271,7 @@ const OverallPotableWaterReport = () => {
                 <th style={{ width: '12%' }}>LEVEL 1</th>
                 <th style={{ width: '12%' }}>LEVEL 2</th>
                 <th style={{ width: '12%' }}>LEVEL 3</th>
-                <th style={{ width: '10%' }}>TOTAL</th>
+                <th style={{ width: '10%' }}>SUB-TOTAL</th>
               </tr>
             </thead>
             <tbody>

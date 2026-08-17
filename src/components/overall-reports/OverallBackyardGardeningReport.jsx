@@ -266,7 +266,7 @@ const OverallBackyardGardeningReport = () => {
                 <th>BARANGAY</th>
                 <th style={{ width: '15%' }}>WITH GARDEN</th>
                 <th style={{ width: '15%' }}>WITHOUT GARDEN</th>
-                <th style={{ width: '10%' }}>TOTAL</th>
+                <th style={{ width: '10%' }}>SUB-TOTAL</th>
               </tr>
             </thead>
             <tbody>

@@ -13,7 +13,6 @@ const IodizedSaltReport = () => {
   const userBarangay = user?.barangay || ''
   
   const [barangay, setBarangay] = useState(isAdmin ? '' : userBarangay)
-  const [selectedPurok, setSelectedPurok] = useState('')
   const [startDate, setStartDate] = useState(new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0])
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0])
   const [records, setRecords] = useState([])
@@ -59,41 +58,45 @@ const IodizedSaltReport = () => {
   }
 
   const generateReport = (data) => {
-    const filteredData = selectedPurok ? data.filter(r => r.purok === parseInt(selectedPurok)) : data
-    
     const purokReports = []
-    filteredData.forEach((r, index) => {
+    for (let p = 1; p <= 7; p++) {
+      const purokRecords = data.filter(r => r.purok === p)
+      
+      // Count stores with each type
+      const fineSaltCount = purokRecords.filter(r => 
+        r.fineSaltFidel || r.fineSaltUFC || r.fineSaltPacificBay || r.fineSaltOthers
+      ).length
+      
+      const rockSaltCount = purokRecords.filter(r => 
+        r.rockSaltAtlantic || r.rockSaltFidel || r.rockSaltLasap || 
+        r.rockSaltPagAsa || r.rockSaltJay || r.rockSaltOthers
+      ).length
+      
+      const oilCount = purokRecords.filter(r => 
+        r.oilUFC || r.oilJolly || r.oilOthers
+      ).length
+      
       purokReports.push({
-        purok: r.purok,
-        storeName: r.storeName || '',
-        fineSaltFidel: r.fineSaltFidel ? '✓' : '',
-        fineSaltUFC: r.fineSaltUFC ? '✓' : '',
-        fineSaltPacificBay: r.fineSaltPacificBay ? '✓' : '',
-        fineSaltOthers: r.fineSaltOthers || '',
-        rockSaltAtlantic: r.rockSaltAtlantic ? '✓' : '',
-        rockSaltFidel: r.rockSaltFidel ? '✓' : '',
-        rockSaltLasap: r.rockSaltLasap ? '✓' : '',
-        rockSaltPagAsa: r.rockSaltPagAsa ? '✓' : '',
-        rockSaltJay: r.rockSaltJay ? '✓' : '',
-        rockSaltOthers: r.rockSaltOthers || '',
-        oilUFC: r.oilUFC ? '✓' : '',
-        oilJolly: r.oilJolly ? '✓' : '',
-        oilOthers: r.oilOthers || '',
-        recordedDate: r.recordedDate
+        purok: p,
+        totalStores: purokRecords.length,
+        fineSalt: fineSaltCount,
+        rockSalt: rockSaltCount,
+        oil: oilCount
       })
-    })
+    }
+    
+    const total = {
+      totalStores: purokReports.reduce((sum, p) => sum + p.totalStores, 0),
+      fineSalt: purokReports.reduce((sum, p) => sum + p.fineSalt, 0),
+      rockSalt: purokReports.reduce((sum, p) => sum + p.rockSalt, 0),
+      oil: purokReports.reduce((sum, p) => sum + p.oil, 0)
+    }
     
     const startYear = new Date(startDate).getFullYear()
     const endYear = new Date(endDate).getFullYear()
     const yearDisplay = startYear === endYear ? startYear.toString() : `${startYear}-${endYear}`
-    setReport({ purokReports, barangay, year: yearDisplay, startDate, endDate })
+    setReport({ purokReports, total, barangay, year: yearDisplay, startDate, endDate })
   }
-
-  useEffect(() => {
-    if (records.length > 0) {
-      generateReport(records)
-    }
-  }, [selectedPurok])
 
   const handleExportPDF = () => {
     if (!report) return
@@ -108,49 +111,38 @@ const IodizedSaltReport = () => {
 
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(14)
-    doc.text('MASTERLIST OF SARI-SARI STORES', pageWidth / 2, 18, { align: 'center' })
+    doc.text('CONSOLIDATED REPORT ON SARI-SARI STORES', pageWidth / 2, 18, { align: 'center' })
     doc.text('(RETAIL) SELLING IODIZED SALT', pageWidth / 2, 26, { align: 'center' })
 
     doc.setFontSize(11)
     doc.text(`BARANGAY: ${barangayName}`, 14, 38)
     doc.text(`DATE: ${new Date(report.startDate).toLocaleDateString()} - ${new Date(report.endDate).toLocaleDateString()}`, 14, 46)
-    if (selectedPurok) {
-      doc.text(`PUROK: ${selectedPurok}`, 14, 54)
-    }
 
-    const startY = selectedPurok ? 60 : 52
+    const body = report.purokReports.map((p) => [
+      p.purok,
+      p.totalStores || 0,
+      p.fineSalt || 0,
+      p.rockSalt || 0,
+      p.oil || 0
+    ])
 
-    const body = report.purokReports.map((r, index) => [
-      index + 1,
-      r.storeName,
-      r.fineSaltFidel || '',
-      r.fineSaltUFC || '',
-      r.fineSaltPacificBay || '',
-      r.fineSaltOthers || '',
-      r.rockSaltAtlantic || '',
-      r.rockSaltFidel || '',
-      r.rockSaltLasap || '',
-      r.rockSaltPagAsa || '',
-      r.rockSaltJay || '',
-      r.rockSaltOthers || '',
-      r.oilUFC || '',
-      r.oilJolly || '',
-      r.oilOthers || ''
+    body.push([
+      'TOTAL',
+      report.total.totalStores || 0,
+      report.total.fineSalt || 0,
+      report.total.rockSalt || 0,
+      report.total.oil || 0
     ])
 
     autoTable(doc, {
-      startY: startY,
-      head: [
-        ['#', 'Store Name', 'FIDEL', 'UFC', 'PACIFIC BAY', 'OTHERS', 
-         'ATLANTIC', 'FIDEL', 'LASAP', 'PAG-ASA', 'JAY', 'OTHERS',
-         'UFC', 'JOLLY', 'OTHERS']
-      ],
+      startY: 52,
+      head: [['PUROK', 'TOTAL STORES', 'FINE SALT', 'ROCK SALT', 'COOKING OIL']],
       body,
       theme: 'grid',
-      styles: { halign: 'center', fontSize: 7, cellPadding: 2 },
+      styles: { halign: 'center', fontSize: 10, cellPadding: 4 },
       headStyles: { fillColor: [255, 255, 255], textColor: 0, fontStyle: 'bold', lineWidth: 0.3 },
       bodyStyles: { lineWidth: 0.3 },
-      columnStyles: { 0: { halign: 'center' }, 1: { halign: 'left' } }
+      columnStyles: { 0: { halign: 'center', fontStyle: 'bold' } }
     })
 
     const finalY = doc.lastAutoTable.finalY + 25
@@ -204,21 +196,7 @@ const IodizedSaltReport = () => {
                 )}
               </Form.Group>
             </Col>
-            <Col md={3}>
-              <Form.Group>
-                <Form.Label>Purok</Form.Label>
-                <Form.Select 
-                  value={selectedPurok} 
-                  onChange={(e) => setSelectedPurok(e.target.value)}
-                >
-                  <option value="">All Puroks</option>
-                  {[1, 2, 3, 4, 5, 6, 7].map((p) => (
-                    <option key={p} value={p}>Purok {p}</option>
-                  ))}
-                </Form.Select>
-              </Form.Group>
-            </Col>
-            <Col md={3}>
+            <Col md={4}>
               <Form.Group>
                 <Form.Label>Start Date</Form.Label>
                 <Form.Control
@@ -228,7 +206,7 @@ const IodizedSaltReport = () => {
                 />
               </Form.Group>
             </Col>
-            <Col md={2}>
+            <Col md={4}>
               <Form.Group>
                 <Form.Label>End Date</Form.Label>
                 <Form.Control
@@ -276,62 +254,41 @@ const IodizedSaltReport = () => {
 
             <div className="text-center mb-4">
               <h5 className="text-uppercase fw-bold mb-1">
-                MASTERLIST OF SARI-SARI STORES (RETAIL) SELLING IODIZED SALT
+                CONSOLIDATED REPORT ON SARI-SARI STORES (RETAIL) SELLING IODIZED SALT
               </h5>
               <p className="mb-0"><strong>BARANGAY:</strong> {barangay.toUpperCase()}</p>
               <p className="mb-0"><strong>DATE:</strong> {new Date(report.startDate).toLocaleDateString()} - {new Date(report.endDate).toLocaleDateString()}</p>
-              {selectedPurok && <p className="mb-0"><strong>PUROK:</strong> {selectedPurok}</p>}
             </div>
 
-            <div className="table-responsive">
-              <Table bordered className="mb-4" size="sm">
-                <thead>
-                  <tr className="text-center">
-                    <th>#</th>
-                    <th>Store Name</th>
-                    <th colSpan="4">FINE IODIZED SALT</th>
-                    <th colSpan="6">ROCK SALT (COARSE) IODIZED SALT</th>
-                    <th colSpan="3">VIT. A FORTIFIED COOKING OIL</th>
+            <Table bordered className="mb-4">
+              <thead>
+                <tr className="text-center">
+                  <th style={{ width: '12%' }}>PUROK</th>
+                  <th style={{ width: '18%' }}>TOTAL STORES</th>
+                  <th style={{ width: '18%' }}>FINE SALT</th>
+                  <th style={{ width: '18%' }}>ROCK SALT</th>
+                  <th style={{ width: '18%' }}>COOKING OIL</th>
+                </tr>
+              </thead>
+              <tbody>
+                {report.purokReports.map((p) => (
+                  <tr key={p.purok}>
+                    <td>{p.purok}</td>
+                    <td className="text-center">{p.totalStores || 0}</td>
+                    <td className="text-center">{p.fineSalt || 0}</td>
+                    <td className="text-center">{p.rockSalt || 0}</td>
+                    <td className="text-center">{p.oil || 0}</td>
                   </tr>
-                  <tr className="text-center">
-                    <th></th>
-                    <th></th>
-                    <th>FIDEL</th><th>UFC</th><th>PACIFIC BAY</th><th>OTHERS</th>
-                    <th>ATLANTIC</th><th>FIDEL</th><th>LASAP</th><th>PAG-ASA</th><th>JAY</th><th>OTHERS</th>
-                    <th>UFC</th><th>JOLLY</th><th>OTHERS</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {report.purokReports.length === 0 ? (
-                    <tr>
-                      <td colSpan="15" className="text-center text-muted py-3">
-                        No records found for the selected filters
-                      </td>
-                    </tr>
-                  ) : (
-                    report.purokReports.map((r, index) => (
-                      <tr key={index}>
-                        <td className="text-center">{index + 1}</td>
-                        <td>{r.storeName}</td>
-                        <td className="text-center">{r.fineSaltFidel}</td>
-                        <td className="text-center">{r.fineSaltUFC}</td>
-                        <td className="text-center">{r.fineSaltPacificBay}</td>
-                        <td className="text-center">{r.fineSaltOthers}</td>
-                        <td className="text-center">{r.rockSaltAtlantic}</td>
-                        <td className="text-center">{r.rockSaltFidel}</td>
-                        <td className="text-center">{r.rockSaltLasap}</td>
-                        <td className="text-center">{r.rockSaltPagAsa}</td>
-                        <td className="text-center">{r.rockSaltJay}</td>
-                        <td className="text-center">{r.rockSaltOthers}</td>
-                        <td className="text-center">{r.oilUFC}</td>
-                        <td className="text-center">{r.oilJolly}</td>
-                        <td className="text-center">{r.oilOthers}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </Table>
-            </div>
+                ))}
+                <tr className="fw-bold">
+                  <td>TOTAL</td>
+                  <td className="text-center">{report.total.totalStores || 0}</td>
+                  <td className="text-center">{report.total.fineSalt || 0}</td>
+                  <td className="text-center">{report.total.rockSalt || 0}</td>
+                  <td className="text-center">{report.total.oil || 0}</td>
+                </tr>
+              </tbody>
+            </Table>
 
             <Row className="mt-3">
               <Col md={4}>

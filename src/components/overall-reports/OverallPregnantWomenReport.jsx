@@ -312,7 +312,7 @@ const OverallPregnantWomenReport = () => {
                 <th style={{ width: '12%' }}>UNDERWEIGHT</th>
                 <th style={{ width: '12%' }}>OVERWEIGHT</th>
                 <th style={{ width: '12%' }}>OBESE</th>
-                <th style={{ width: '10%' }}>TOTAL</th>
+                <th style={{ width: '10%' }}>SUB-TOTAL</th>
               </tr>
             </thead>
             <tbody>

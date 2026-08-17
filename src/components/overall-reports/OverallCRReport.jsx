@@ -266,7 +266,7 @@ const OverallCRReport = () => {
                 <th>BARANGAY</th>
                 <th style={{ width: '15%' }}>WITH CR</th>
                 <th style={{ width: '15%' }}>WITHOUT CR</th>
-                <th style={{ width: '10%' }}>TOTAL</th>
+                <th style={{ width: '10%' }}>SUB-TOTAL</th>
               </tr>
             </thead>
             <tbody>
