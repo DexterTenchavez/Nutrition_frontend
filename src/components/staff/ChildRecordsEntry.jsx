@@ -1,7 +1,9 @@
+
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { childRecordApi } from '../../api/auth'
 import { BARANGAYS } from '../../utils/constants'
+import { useStaffDataEntry } from './StaffDataEntryContext'
 import { Card, Form, Button, Alert, Table, Row, Col, Pagination } from 'react-bootstrap'
 import { FaSearch, FaTimes, FaFilter } from 'react-icons/fa'
 
@@ -9,18 +11,19 @@ const ChildRecordsEntry = () => {
   const { user } = useAuth()
   const isAdmin = user?.role === 'admin'
   const userBarangay = user?.barangay || ''
-  
+  const { selectedBarangay, setSelectedBarangay, searchTerm, setSearchTerm, recordDate, setRecordDate, purok, setPurok, name, setName } = useStaffDataEntry()
+
   const [formData, setFormData] = useState({
     barangay: userBarangay,
-    purok: '',
+    purok: purok,
     targetCategory: 'Child (0–59 months)',
-    fullName: '',
+    fullName: name,
     birthdate: '',
     ageMonths: '',
     weight: '',
     height: '',
     nutritionalStatus: '',
-    recordedDate: new Date().toISOString().split('T')[0],
+    recordedDate: recordDate,
   })
   const [records, setRecords] = useState([])
   const [filteredRecords, setFilteredRecords] = useState([])
@@ -28,8 +31,7 @@ const ChildRecordsEntry = () => {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [editingId, setEditingId] = useState(null)
-  const [searchTerm, setSearchTerm] = useState('')
-  
+
   const [currentPage, setCurrentPage] = useState(1)
   const [recordsPerPage, setRecordsPerPage] = useState(15)
   
@@ -46,8 +48,14 @@ const ChildRecordsEntry = () => {
   const [showFilters, setShowFilters] = useState(false)
 
   useEffect(() => {
-    fetchRecords()
-  }, [])
+    if (selectedBarangay) {
+      fetchRecords()
+    }
+  }, [selectedBarangay])
+
+  useEffect(() => {
+    setFormData((prev) => ({ ...prev, barangay: selectedBarangay }))
+  }, [selectedBarangay])
 
   useEffect(() => {
     applyFiltersAndSearch()
@@ -56,7 +64,7 @@ const ChildRecordsEntry = () => {
   const fetchRecords = async () => {
     try {
       const data = await childRecordApi.getAll()
-      const filteredData = isAdmin ? data : data.filter(r => r.barangay === userBarangay)
+      const filteredData = data.filter(r => r.barangay === selectedBarangay)
       setRecords(filteredData)
       setFilteredRecords(filteredData)
     } catch (error) {
@@ -106,6 +114,13 @@ const ChildRecordsEntry = () => {
       filtered = filtered.filter(record => record.height <= parseFloat(filters.heightMax))
     }
 
+    filtered.sort((a, b) => {
+      if (a.purok !== b.purok) return a.purok - b.purok
+      const nameCompare = (a.fullName || '').localeCompare(b.fullName || '')
+      if (nameCompare !== 0) return nameCompare
+      return new Date(b.recordedDate) - new Date(a.recordedDate)
+    })
+
     setFilteredRecords(filtered)
     setCurrentPage(1)
   }
@@ -141,7 +156,11 @@ const ChildRecordsEntry = () => {
   // Auto-calculate age when birthdate or recorded date changes
   const handleDateChange = (field, value) => {
     const updatedForm = { ...formData, [field]: value }
-    
+
+    if (field === 'recordedDate') {
+      setRecordDate(value)
+    }
+
     if (field === 'birthdate' || field === 'recordedDate') {
       const age = calculateAge(updatedForm.birthdate, updatedForm.recordedDate)
       if (age !== '' && age !== null && age !== undefined) {
@@ -247,9 +266,9 @@ const ChildRecordsEntry = () => {
 
       setFormData({
         barangay: userBarangay,
-        purok: '',
+        purok: purok,
         targetCategory: 'Child (0–59 months)',
-        fullName: '',
+        fullName: name,
         birthdate: '',
         ageMonths: '',
         weight: '',
@@ -280,6 +299,8 @@ const ChildRecordsEntry = () => {
       nutritionalStatus: record.nutritionalStatus,
       recordedDate: record.recordedDate ? record.recordedDate.split('T')[0] : new Date().toISOString().split('T')[0],
     })
+    setPurok(record.purok)
+    setName(record.fullName || '')
     setEditingId(record.id)
   }
 
@@ -376,6 +397,24 @@ const ChildRecordsEntry = () => {
     <div>
       <h4 className="mb-4">Vitamin A Records</h4>
 
+      <Row className="mb-3">
+        <Col md={4}>
+          <Form.Group>
+            <Form.Label>Barangay</Form.Label>
+            <Form.Select
+              value={selectedBarangay}
+              onChange={(e) => setSelectedBarangay(e.target.value)}
+              disabled={!isAdmin}
+            >
+              <option value="">Select Barangay</option>
+              {BARANGAYS.map((b) => (
+                <option key={b} value={b}>{b}</option>
+              ))}
+            </Form.Select>
+          </Form.Group>
+        </Col>
+      </Row>
+
       <Card className="mb-4">
         <Card.Header>
           <h6 className="mb-0">{editingId ? 'Edit' : 'New'} Record</h6>
@@ -388,26 +427,13 @@ const ChildRecordsEntry = () => {
             <Row>
               <Col md={4}>
                 <Form.Group className="mb-3">
-                  <Form.Label>Barangay</Form.Label>
-                  <Form.Select
-                    value={formData.barangay}
-                    onChange={(e) => setFormData({ ...formData, barangay: e.target.value })}
-                    required
-                    disabled={!isAdmin}
-                  >
-                    <option value="">Select Barangay</option>
-                    {BARANGAYS.map((b) => (
-                      <option key={b} value={b}>{b}</option>
-                    ))}
-                  </Form.Select>
-                </Form.Group>
-              </Col>
-              <Col md={4}>
-                <Form.Group className="mb-3">
                   <Form.Label>Purok</Form.Label>
                   <Form.Select
                     value={formData.purok}
-                    onChange={(e) => setFormData({ ...formData, purok: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, purok: e.target.value })
+                      setPurok(e.target.value)
+                    }}
                     required
                   >
                     <option value="">Select Purok</option>
@@ -417,6 +443,24 @@ const ChildRecordsEntry = () => {
                   </Form.Select>
                 </Form.Group>
               </Col>
+              <Col md={8}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Full Name</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={formData.fullName}
+                    onChange={(e) => {
+                      setFormData({ ...formData, fullName: e.target.value })
+                      setName(e.target.value)
+                    }}
+                    required
+                    placeholder="Enter full name"
+                  />
+                </Form.Group>
+              </Col>
+            </Row>
+
+            <Row>
               <Col md={4}>
                 <Form.Group className="mb-3">
                   <Form.Label>Record Date</Form.Label>
@@ -428,22 +472,7 @@ const ChildRecordsEntry = () => {
                   />
                 </Form.Group>
               </Col>
-            </Row>
-
-            <Row>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>Full Name</Form.Label>
-                  <Form.Control
-                    type="text"
-                    value={formData.fullName}
-                    onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                    required
-                    placeholder="Enter full name"
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
+              <Col md={8}>
                 <Form.Group className="mb-3">
                   <Form.Label>Birthdate</Form.Label>
                   <Form.Control
@@ -537,9 +566,9 @@ const ChildRecordsEntry = () => {
                 setEditingId(null)
                 setFormData({
                   barangay: userBarangay,
-                  purok: '',
+                  purok: purok,
                   targetCategory: 'Child (0–59 months)',
-                  fullName: '',
+                  fullName: name,
                   birthdate: '',
                   ageMonths: '',
                   weight: '',

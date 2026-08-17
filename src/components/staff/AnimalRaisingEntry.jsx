@@ -1,17 +1,20 @@
+
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { animalRaisingApi } from '../../api/reports'
 import { BARANGAYS } from '../../utils/constants'
+import { useStaffDataEntry } from './StaffDataEntryContext'
 import { Card, Form, Button, Alert, Table, Row, Col, Pagination } from 'react-bootstrap'
 import { FaSearch, FaTimes, FaFilter } from 'react-icons/fa'
 
 const AnimalRaisingEntry = () => {
   const { user } = useAuth()
   const isAdmin = user?.role === 'admin'
+  const { selectedBarangay, setSelectedBarangay, searchTerm, setSearchTerm, recordDate, setRecordDate, purok, setPurok, name, setName } = useStaffDataEntry()
   const [formData, setFormData] = useState({
     barangay: user?.barangay || '',
-    purok: '',
-    householdName: '',
+    purok: purok,
+    householdName: name,
     chickenMale: '0',
     chickenFemale: '0',
     pigMale: '0',
@@ -22,7 +25,7 @@ const AnimalRaisingEntry = () => {
     cowFemale: '0',
     carabaoMale: '0',
     carabaoFemale: '0',
-    recordedDate: new Date().toISOString().split('T')[0],
+    recordedDate: recordDate,
     recordedBy: user?.username || ''
   })
   const [records, setRecords] = useState([])
@@ -31,15 +34,12 @@ const AnimalRaisingEntry = () => {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [editingId, setEditingId] = useState(null)
-  const [selectedBarangay, setSelectedBarangay] = useState(user?.barangay || '')
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
-  
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
   const [recordsPerPage, setRecordsPerPage] = useState(15)
-  
+
   // Search and Filter state
-  const [searchTerm, setSearchTerm] = useState('')
   const [filters, setFilters] = useState({
     purok: '',
   })
@@ -49,7 +49,7 @@ const AnimalRaisingEntry = () => {
     if (selectedBarangay) {
       fetchRecords()
     }
-  }, [selectedBarangay, selectedDate])
+  }, [selectedBarangay])
 
   useEffect(() => {
     applyFiltersAndSearch()
@@ -81,6 +81,13 @@ const AnimalRaisingEntry = () => {
     if (filters.purok) {
       filtered = filtered.filter(record => record.purok === parseInt(filters.purok))
     }
+
+    filtered.sort((a, b) => {
+      if (a.purok !== b.purok) return a.purok - b.purok
+      const nameCompare = (a.householdName || '').localeCompare(b.householdName || '')
+      if (nameCompare !== 0) return nameCompare
+      return new Date(b.recordedDate) - new Date(a.recordedDate)
+    })
 
     setFilteredRecords(filtered)
     setCurrentPage(1)
@@ -152,8 +159,8 @@ const AnimalRaisingEntry = () => {
 
       setFormData({
         barangay: user?.barangay || '',
-        purok: '',
-        householdName: '',
+        purok: purok,
+        householdName: name,
         chickenMale: '0',
         chickenFemale: '0',
         pigMale: '0',
@@ -197,6 +204,8 @@ const AnimalRaisingEntry = () => {
       recordedDate: formattedDate,
       recordedBy: record.recordedBy || user?.username || ''
     })
+    setPurok(record.purok)
+    setName(record.householdName || '')
     setEditingId(record.id)
   }
 
@@ -320,7 +329,10 @@ const AnimalRaisingEntry = () => {
                   <Form.Label>Purok</Form.Label>
                   <Form.Select
                     value={formData.purok}
-                    onChange={(e) => setFormData({ ...formData, purok: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, purok: e.target.value })
+                      setPurok(e.target.value)
+                    }}
                     required
                   >
                     <option value="">Select Purok</option>
@@ -336,7 +348,10 @@ const AnimalRaisingEntry = () => {
                   <Form.Control
                     type="text"
                     value={formData.householdName}
-                    onChange={(e) => setFormData({ ...formData, householdName: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, householdName: e.target.value })
+                      setName(e.target.value)
+                    }}
                     required
                     placeholder="Enter household name"
                   />
@@ -351,7 +366,10 @@ const AnimalRaisingEntry = () => {
                   <Form.Control
                     type="date"
                     value={formData.recordedDate}
-                    onChange={(e) => setFormData({ ...formData, recordedDate: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, recordedDate: e.target.value })
+                      setRecordDate(e.target.value)
+                    }}
                     required
                   />
                 </Form.Group>
@@ -533,8 +551,8 @@ const AnimalRaisingEntry = () => {
                 setEditingId(null)
                 setFormData({
                   barangay: user?.barangay || '',
-                  purok: '',
-                  householdName: '',
+                  purok: purok,
+                  householdName: name,
                   chickenMale: '0',
                   chickenFemale: '0',
                   pigMale: '0',

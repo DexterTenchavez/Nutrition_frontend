@@ -1,20 +1,22 @@
+
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { crApi } from '../../api/reports'
 import { BARANGAYS } from '../../utils/constants'
+import { useStaffDataEntry } from './StaffDataEntryContext'
 import { Card, Form, Button, Alert, Table, Row, Col, Pagination } from 'react-bootstrap'
 import { FaSearch, FaTimes, FaFilter } from 'react-icons/fa'
 
 const CREntry = () => {
   const { user } = useAuth()
   const isAdmin = user?.role === 'admin'
+  const { selectedBarangay, setSelectedBarangay, searchTerm, setSearchTerm, recordDate, setRecordDate, purok, setPurok, name, setName } = useStaffDataEntry()
   const [formData, setFormData] = useState({
     barangay: user?.barangay || '',
-    purok: '',
-    householdName: '',
-    withCR: false,
-    withoutCR: false,
-    recordedDate: new Date().toISOString().split('T')[0],
+    purok: purok,
+    householdName: name,
+    cr: '0',
+    recordedDate: recordDate,
     recordedBy: user?.username || ''
   })
   const [records, setRecords] = useState([])
@@ -23,14 +25,12 @@ const CREntry = () => {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [editingId, setEditingId] = useState(null)
-  const [selectedBarangay, setSelectedBarangay] = useState(user?.barangay || '')
-  
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
   const [recordsPerPage, setRecordsPerPage] = useState(15)
-  
+
   // Search and Filter state
-  const [searchTerm, setSearchTerm] = useState('')
   const [filters, setFilters] = useState({
     purok: '',
     crStatus: '',
@@ -81,6 +81,13 @@ const CREntry = () => {
         filtered = filtered.filter(record => record.withoutCR === true)
       } 
     }
+
+    filtered.sort((a, b) => {
+      if (a.purok !== b.purok) return a.purok - b.purok
+      const nameCompare = (a.householdName || '').localeCompare(b.householdName || '')
+      if (nameCompare !== 0) return nameCompare
+      return new Date(b.recordedDate) - new Date(a.recordedDate)
+    })
 
     setFilteredRecords(filtered)
     setCurrentPage(1)
@@ -162,8 +169,8 @@ const CREntry = () => {
 
       setFormData({
         barangay: user?.barangay || '',
-        purok: '',
-        householdName: '',
+        purok: purok,
+        householdName: name,
         withCR: false,
         withoutCR: false,
         recordedDate: new Date().toISOString().split('T')[0],
@@ -191,6 +198,8 @@ const CREntry = () => {
       recordedDate: formattedDate,
       recordedBy: record.recordedBy || user?.username || ''
     })
+    setPurok(record.purok)
+    setName(record.householdName || '')
     setEditingId(record.id)
   }
 
@@ -313,21 +322,13 @@ const CREntry = () => {
             <Row>
               <Col md={4}>
                 <Form.Group className="mb-3">
-                  <Form.Label>Record Date</Form.Label>
-                  <Form.Control
-                    type="date"
-                    value={formData.recordedDate}
-                    onChange={(e) => setFormData({ ...formData, recordedDate: e.target.value })}
-                    required
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={4}>
-                <Form.Group className="mb-3">
                   <Form.Label>Purok</Form.Label>
                   <Form.Select
                     value={formData.purok}
-                    onChange={(e) => setFormData({ ...formData, purok: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, purok: e.target.value })
+                      setPurok(e.target.value)
+                    }}
                     required
                   >
                     <option value="">Select Purok</option>
@@ -343,9 +344,26 @@ const CREntry = () => {
                   <Form.Control
                     type="text"
                     value={formData.householdName}
-                    onChange={(e) => setFormData({ ...formData, householdName: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, householdName: e.target.value })
+                      setName(e.target.value)
+                    }}
                     required
                     placeholder="Enter household name"
+                  />
+                </Form.Group>
+              </Col>
+              <Col md={4}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Record Date</Form.Label>
+                  <Form.Control
+                    type="date"
+                    value={formData.recordedDate}
+                    onChange={(e) => {
+                      setFormData({ ...formData, recordedDate: e.target.value })
+                      setRecordDate(e.target.value)
+                    }}
+                    required
                   />
                 </Form.Group>
               </Col>
@@ -390,8 +408,8 @@ const CREntry = () => {
                 setEditingId(null)
                 setFormData({
                   barangay: user?.barangay || '',
-                  purok: '',
-                  householdName: '',
+                  purok: purok,
+                  householdName: name,
                   withCR: false,
                   withoutCR: false,
                   recordedDate: new Date().toISOString().split('T')[0],

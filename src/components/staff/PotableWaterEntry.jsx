@@ -1,20 +1,23 @@
+
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { potableWaterApi } from '../../api/reports'
 import { BARANGAYS } from '../../utils/constants'
+import { useStaffDataEntry } from './StaffDataEntryContext'
 import { Card, Form, Button, Alert, Table, Row, Col, Pagination } from 'react-bootstrap'
 import { FaSearch, FaTimes, FaFilter } from 'react-icons/fa'
 
 const PotableWaterEntry = () => {
   const { user } = useAuth()
+  const { selectedBarangay, setSelectedBarangay, searchTerm, setSearchTerm, recordDate, setRecordDate, purok, setPurok, name, setName } = useStaffDataEntry()
   const [formData, setFormData] = useState({
     barangay: user?.barangay || '',
-    purok: '',
-    householdName: '',
+    purok: purok,
+    householdName: name,
     level1: '0',
     level2: '0',
     level3: '0',
-    recordedDate: new Date().toISOString().split('T')[0],
+    recordedDate: recordDate,
     recordedBy: user?.username || ''
   })
   const [records, setRecords] = useState([])
@@ -23,14 +26,12 @@ const PotableWaterEntry = () => {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [editingId, setEditingId] = useState(null)
-  const [selectedBarangay, setSelectedBarangay] = useState(user?.barangay || '')
-  
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
   const [recordsPerPage, setRecordsPerPage] = useState(15)
-  
+
   // Search and Filter state
-  const [searchTerm, setSearchTerm] = useState('')
   const [filters, setFilters] = useState({
     purok: '',
   })
@@ -95,6 +96,13 @@ const PotableWaterEntry = () => {
     if (filters.purok) {
       filtered = filtered.filter(record => record.purok === parseInt(filters.purok))
     }
+
+    filtered.sort((a, b) => {
+      if (a.purok !== b.purok) return a.purok - b.purok
+      const nameCompare = (a.householdName || '').localeCompare(b.householdName || '')
+      if (nameCompare !== 0) return nameCompare
+      return new Date(b.recordedDate) - new Date(a.recordedDate)
+    })
 
     setFilteredRecords(filtered)
     setCurrentPage(1)
@@ -161,8 +169,8 @@ const PotableWaterEntry = () => {
       // Reset form
       setFormData({
         barangay: user?.barangay || '',
-        purok: '',
-        householdName: '',
+        purok: purok,
+        householdName: name,
         level1: '0',
         level2: '0',
         level3: '0',
@@ -192,6 +200,8 @@ const PotableWaterEntry = () => {
       recordedDate: formattedDate,
       recordedBy: record.recordedBy || user?.username || ''
     })
+    setPurok(record.purok)
+    setName(record.householdName || '')
     setEditingId(record.id)
   }
 
@@ -311,21 +321,13 @@ const PotableWaterEntry = () => {
             <Row>
               <Col md={4}>
                 <Form.Group className="mb-3">
-                  <Form.Label>Record Date</Form.Label>
-                  <Form.Control
-                    type="date"
-                    value={formData.recordedDate}
-                    onChange={(e) => setFormData({ ...formData, recordedDate: e.target.value })}
-                    required
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={4}>
-                <Form.Group className="mb-3">
                   <Form.Label>Purok</Form.Label>
                   <Form.Select
                     value={formData.purok}
-                    onChange={(e) => setFormData({ ...formData, purok: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, purok: e.target.value })
+                      setPurok(e.target.value)
+                    }}
                     required
                   >
                     <option value="">Select Purok</option>
@@ -341,9 +343,26 @@ const PotableWaterEntry = () => {
                   <Form.Control
                     type="text"
                     value={formData.householdName}
-                    onChange={(e) => setFormData({ ...formData, householdName: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, householdName: e.target.value })
+                      setName(e.target.value)
+                    }}
                     required
                     placeholder="Enter household name"
+                  />
+                </Form.Group>
+              </Col>
+              <Col md={4}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Record Date</Form.Label>
+                  <Form.Control
+                    type="date"
+                    value={formData.recordedDate}
+                    onChange={(e) => {
+                      setFormData({ ...formData, recordedDate: e.target.value })
+                      setRecordDate(e.target.value)
+                    }}
+                    required
                   />
                 </Form.Group>
               </Col>
@@ -412,8 +431,8 @@ const PotableWaterEntry = () => {
                 setEditingId(null)
                 setFormData({
                   barangay: user?.barangay || '',
-                  purok: '',
-                  householdName: '',
+                  purok: purok,
+                  householdName: name,
                   level1: '0',
                   level2: '0',
                   level3: '0',

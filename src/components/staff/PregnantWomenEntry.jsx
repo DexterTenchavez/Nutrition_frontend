@@ -1,21 +1,24 @@
+
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { pregnantWomenApi } from '../../api/reports'
 import { BARANGAYS } from '../../utils/constants'
+import { useStaffDataEntry } from './StaffDataEntryContext'
 import { Card, Form, Button, Alert, Table, Row, Col, Pagination } from 'react-bootstrap'
 import { FaSearch, FaTimes, FaFilter } from 'react-icons/fa'
 
 const PregnantWomenEntry = () => {
   const { user } = useAuth()
+  const { selectedBarangay, setSelectedBarangay, searchTerm, setSearchTerm, recordDate, setRecordDate, purok, setPurok, name, setName } = useStaffDataEntry()
   const [formData, setFormData] = useState({
     barangay: user?.barangay || '',
-    purok: '',
-    womanName: '',
+    purok: purok,
+    womanName: name,
     weight: '',
     height: '',
     bmi: '',
     bmiCategory: '',
-    recordedDate: new Date().toISOString().split('T')[0],
+    recordedDate: recordDate,
     recordedBy: user?.username || ''
   })
   const [records, setRecords] = useState([])
@@ -24,15 +27,12 @@ const PregnantWomenEntry = () => {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [editingId, setEditingId] = useState(null)
-  const [selectedBarangay, setSelectedBarangay] = useState(user?.barangay || '')
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
-  
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
   const [recordsPerPage, setRecordsPerPage] = useState(15)
-  
+
   // Search and Filter state
-  const [searchTerm, setSearchTerm] = useState('')
   const [filters, setFilters] = useState({
     purok: '',
     bmiCategory: '',
@@ -45,7 +45,7 @@ const PregnantWomenEntry = () => {
     if (selectedBarangay) {
       fetchRecords()
     }
-  }, [selectedBarangay, selectedDate])
+  }, [selectedBarangay])
 
   useEffect(() => {
     applyFiltersAndSearch()
@@ -81,6 +81,13 @@ const PregnantWomenEntry = () => {
     if (filters.bmiCategory) {
       filtered = filtered.filter(record => record.bmiCategory === filters.bmiCategory)
     }
+
+    filtered.sort((a, b) => {
+      if (a.purok !== b.purok) return a.purok - b.purok
+      const nameCompare = (a.womanName || '').localeCompare(b.womanName || '')
+      if (nameCompare !== 0) return nameCompare
+      return new Date(b.recordedDate) - new Date(a.recordedDate)
+    })
 
     setFilteredRecords(filtered)
     setCurrentPage(1)
@@ -174,7 +181,7 @@ const PregnantWomenEntry = () => {
     setLoading(true)
 
     try {
-      const year = new Date(selectedDate).getFullYear()
+      const year = new Date(recordDate).getFullYear()
       const weight = parseFloat(formData.weight)
       const height = parseFloat(formData.height)
       const bmi = calculateBMI(weight, height)
@@ -188,7 +195,7 @@ const PregnantWomenEntry = () => {
         bmi: bmi,
         bmiCategory: getBMICategory(bmi),
         year: year,
-        recordedDate: selectedDate
+        recordedDate: recordDate
       }
 
       if (editingId) {
@@ -201,8 +208,8 @@ const PregnantWomenEntry = () => {
 
       setFormData({
         barangay: user?.barangay || '',
-        purok: '',
-        womanName: '',
+        purok: purok,
+        womanName: name,
         weight: '',
         height: '',
         bmi: '',
@@ -234,7 +241,9 @@ const PregnantWomenEntry = () => {
       recordedDate: formattedDate,
       recordedBy: record.recordedBy || user?.username || ''
     })
-    setSelectedDate(formattedDate)
+    setPurok(record.purok)
+    setName(record.womanName || '')
+    setRecordDate(formattedDate)
     setEditingId(record.id)
   }
 
@@ -340,8 +349,8 @@ const PregnantWomenEntry = () => {
             <Form.Label>Record Date</Form.Label>
             <Form.Control
               type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
+              value={recordDate}
+              onChange={(e) => setRecordDate(e.target.value)}
             />
           </Form.Group>
         </Col>
@@ -362,7 +371,10 @@ const PregnantWomenEntry = () => {
                   <Form.Label>Purok</Form.Label>
                   <Form.Select
                     value={formData.purok}
-                    onChange={(e) => setFormData({ ...formData, purok: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, purok: e.target.value })
+                      setPurok(e.target.value)
+                    }}
                     required
                   >
                     <option value="">Select Purok</option>
@@ -378,7 +390,10 @@ const PregnantWomenEntry = () => {
                   <Form.Control
                     type="text"
                     value={formData.womanName}
-                    onChange={(e) => setFormData({ ...formData, womanName: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, womanName: e.target.value })
+                      setName(e.target.value)
+                    }}
                     required
                     placeholder="Enter woman's full name"
                   />
@@ -461,8 +476,8 @@ const PregnantWomenEntry = () => {
                 setEditingId(null)
                 setFormData({
                   barangay: user?.barangay || '',
-                  purok: '',
-                  womanName: '',
+                  purok: purok,
+                  womanName: name,
                   weight: '',
                   height: '',
                   bmi: '',
@@ -470,7 +485,7 @@ const PregnantWomenEntry = () => {
                   recordedDate: new Date().toISOString().split('T')[0],
                   recordedBy: user?.username || ''
                 })
-                setSelectedDate(new Date().toISOString().split('T')[0])
+                setRecordDate(new Date().toISOString().split('T')[0])
               }}>
                 Cancel
               </Button>

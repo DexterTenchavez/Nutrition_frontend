@@ -1,17 +1,20 @@
+
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { animalDispersalApi } from '../../api/reports'
 import { BARANGAYS } from '../../utils/constants'
+import { useStaffDataEntry } from './StaffDataEntryContext'
 import { Card, Form, Button, Alert, Table, Row, Col, Pagination } from 'react-bootstrap'
 import { FaSearch, FaTimes, FaFilter } from 'react-icons/fa'
 
 const AnimalDispersalEntry = () => {
   const { user } = useAuth()
   const isAdmin = user?.role === 'admin'
+  const { selectedBarangay, setSelectedBarangay, searchTerm, setSearchTerm, recordDate, setRecordDate, purok, setPurok, name, setName } = useStaffDataEntry()
   const [formData, setFormData] = useState({
     barangay: user?.barangay || '',
-    purok: '',
-    householdName: '',
+    purok: purok,
+    householdName: name,
     chickenMale: '0',
     chickenFemale: '0',
     pigMale: '0',
@@ -22,7 +25,7 @@ const AnimalDispersalEntry = () => {
     cowFemale: '0',
     carabaoMale: '0',
     carabaoFemale: '0',
-    recordedDate: new Date().toISOString().split('T')[0],
+    recordedDate: recordDate,
     recordedBy: user?.username || ''
   })
   const [records, setRecords] = useState([])
@@ -31,15 +34,12 @@ const AnimalDispersalEntry = () => {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [editingId, setEditingId] = useState(null)
-  const [selectedBarangay, setSelectedBarangay] = useState(user?.barangay || '')
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
-  
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
   const [recordsPerPage, setRecordsPerPage] = useState(15)
-  
+
   // Search and Filter state
-  const [searchTerm, setSearchTerm] = useState('')
   const [filters, setFilters] = useState({
     purok: '',
   })
@@ -49,7 +49,7 @@ const AnimalDispersalEntry = () => {
     if (selectedBarangay) {
       fetchRecords()
     }
-  }, [selectedBarangay]) // <- Remove selectedDate dependency
+  }, [selectedBarangay])
 
   useEffect(() => {
     applyFiltersAndSearch()
@@ -78,6 +78,13 @@ const AnimalDispersalEntry = () => {
     if (filters.purok) {
       filtered = filtered.filter(record => record.purok === parseInt(filters.purok))
     }
+
+    filtered.sort((a, b) => {
+      if (a.purok !== b.purok) return a.purok - b.purok
+      const nameCompare = (a.householdName || '').localeCompare(b.householdName || '')
+      if (nameCompare !== 0) return nameCompare
+      return new Date(b.recordedDate) - new Date(a.recordedDate)
+    })
 
     setFilteredRecords(filtered)
     setCurrentPage(1)
@@ -116,7 +123,6 @@ const AnimalDispersalEntry = () => {
     setLoading(true)
 
     try {
-      // Use the date from the form, NOT selectedDate
       const year = new Date(formData.recordedDate).getFullYear()
       
       const data = {
@@ -149,8 +155,8 @@ const AnimalDispersalEntry = () => {
 
       setFormData({
         barangay: user?.barangay || '',
-        purok: '',
-        householdName: '',
+        purok: purok,
+        householdName: name,
         chickenMale: '0',
         chickenFemale: '0',
         pigMale: '0',
@@ -194,7 +200,8 @@ const AnimalDispersalEntry = () => {
       recordedDate: formattedDate,
       recordedBy: record.recordedBy || user?.username || ''
     })
-    setSelectedDate(formattedDate)
+    setPurok(record.purok)
+    setName(record.householdName || '')
     setEditingId(record.id)
   }
 
@@ -317,7 +324,10 @@ const AnimalDispersalEntry = () => {
                   <Form.Label>Purok</Form.Label>
                   <Form.Select
                     value={formData.purok}
-                    onChange={(e) => setFormData({ ...formData, purok: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, purok: e.target.value })
+                      setPurok(e.target.value)
+                    }}
                     required
                   >
                     <option value="">Select Purok</option>
@@ -333,7 +343,10 @@ const AnimalDispersalEntry = () => {
                   <Form.Control
                     type="text"
                     value={formData.householdName}
-                    onChange={(e) => setFormData({ ...formData, householdName: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, householdName: e.target.value })
+                      setName(e.target.value)
+                    }}
                     required
                     placeholder="Enter household name"
                   />
@@ -350,8 +363,8 @@ const AnimalDispersalEntry = () => {
                     type="date"
                     value={formData.recordedDate}
                     onChange={(e) => {
-                      console.log('Date selected:', e.target.value) // Debug log
                       setFormData({ ...formData, recordedDate: e.target.value })
+                      setRecordDate(e.target.value)
                     }}
                     required
                   />
@@ -534,8 +547,8 @@ const AnimalDispersalEntry = () => {
                 setEditingId(null)
                 setFormData({
                   barangay: user?.barangay || '',
-                  purok: '',
-                  householdName: '',
+                  purok: purok,
+                  householdName: name,
                   chickenMale: '0',
                   chickenFemale: '0',
                   pigMale: '0',
@@ -549,7 +562,6 @@ const AnimalDispersalEntry = () => {
                   recordedDate: new Date().toISOString().split('T')[0],
                   recordedBy: user?.username || ''
                 })
-                setSelectedDate(new Date().toISOString().split('T')[0])
               }}>
                 Cancel
               </Button>

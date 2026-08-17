@@ -1,19 +1,22 @@
+
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { backyardGardeningApi } from '../../api/reports'
 import { BARANGAYS } from '../../utils/constants'
+import { useStaffDataEntry } from './StaffDataEntryContext'
 import { Card, Form, Button, Alert, Table, Row, Col, Pagination } from 'react-bootstrap'
 import { FaSearch, FaTimes, FaFilter } from 'react-icons/fa'
 
 const BackyardGardeningEntry = () => {
   const { user } = useAuth()
   const isAdmin = user?.role === 'admin'
+  const { selectedBarangay, setSelectedBarangay, searchTerm, setSearchTerm, recordDate, setRecordDate, purok, setPurok, name, setName } = useStaffDataEntry()
   const [formData, setFormData] = useState({
     barangay: user?.barangay || '',
-    purok: '',
-    householdName: '',
+    purok: purok,
+    householdName: name,
     hasGarden: false,
-    recordedDate: new Date().toISOString().split('T')[0],
+    recordedDate: recordDate,
     recordedBy: user?.username || ''
   })
   const [records, setRecords] = useState([])
@@ -22,15 +25,12 @@ const BackyardGardeningEntry = () => {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [editingId, setEditingId] = useState(null)
-  const [selectedBarangay, setSelectedBarangay] = useState(user?.barangay || '')
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
-  
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
   const [recordsPerPage, setRecordsPerPage] = useState(15)
-  
+
   // Search and Filter state
-  const [searchTerm, setSearchTerm] = useState('')
   const [filters, setFilters] = useState({
     purok: '',
     gardenStatus: '',
@@ -41,7 +41,7 @@ const BackyardGardeningEntry = () => {
     if (selectedBarangay) {
       fetchRecords()
     }
-  }, [selectedBarangay, selectedDate])
+  }, [selectedBarangay])
 
   useEffect(() => {
     applyFiltersAndSearch()
@@ -81,6 +81,13 @@ const BackyardGardeningEntry = () => {
         filtered = filtered.filter(record => record.hasGarden === false)
       }
     }
+
+    filtered.sort((a, b) => {
+      if (a.purok !== b.purok) return a.purok - b.purok
+      const nameCompare = (a.householdName || '').localeCompare(b.householdName || '')
+      if (nameCompare !== 0) return nameCompare
+      return new Date(b.recordedDate) - new Date(a.recordedDate)
+    })
 
     setFilteredRecords(filtered)
     setCurrentPage(1)
@@ -143,8 +150,8 @@ const BackyardGardeningEntry = () => {
 
       setFormData({
         barangay: user?.barangay || '',
-        purok: '',
-        householdName: '',
+        purok: purok,
+        householdName: name,
         hasGarden: false,
         recordedDate: new Date().toISOString().split('T')[0],
         recordedBy: user?.username || ''
@@ -170,7 +177,8 @@ const BackyardGardeningEntry = () => {
       recordedDate: formattedDate,
       recordedBy: record.recordedBy || user?.username || ''
     })
-    setSelectedDate(formattedDate)
+    setPurok(record.purok)
+    setName(record.householdName || '')
     setEditingId(record.id)
   }
 
@@ -293,7 +301,10 @@ const BackyardGardeningEntry = () => {
                   <Form.Label>Purok</Form.Label>
                   <Form.Select
                     value={formData.purok}
-                    onChange={(e) => setFormData({ ...formData, purok: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, purok: e.target.value })
+                      setPurok(e.target.value)
+                    }}
                     required
                   >
                     <option value="">Select Purok</option>
@@ -309,7 +320,10 @@ const BackyardGardeningEntry = () => {
                   <Form.Control
                     type="text"
                     value={formData.householdName}
-                    onChange={(e) => setFormData({ ...formData, householdName: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, householdName: e.target.value })
+                      setName(e.target.value)
+                    }}
                     required
                     placeholder="Enter household name"
                   />
@@ -324,7 +338,10 @@ const BackyardGardeningEntry = () => {
                   <Form.Control
                     type="date"
                     value={formData.recordedDate}
-                    onChange={(e) => setFormData({ ...formData, recordedDate: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, recordedDate: e.target.value })
+                      setRecordDate(e.target.value)
+                    }}
                     required
                   />
                 </Form.Group>
@@ -356,13 +373,12 @@ const BackyardGardeningEntry = () => {
                 setEditingId(null)
                 setFormData({
                   barangay: user?.barangay || '',
-                  purok: '',
-                  householdName: '',
+                  purok: purok,
+                  householdName: name,
                   hasGarden: false,
                   recordedDate: new Date().toISOString().split('T')[0],
                   recordedBy: user?.username || ''
                 })
-                setSelectedDate(new Date().toISOString().split('T')[0])
               }}>
                 Cancel
               </Button>

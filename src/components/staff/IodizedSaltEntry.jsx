@@ -1,17 +1,20 @@
+
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { iodizedSaltApi } from '../../api/reports'
 import { BARANGAYS } from '../../utils/constants'
+import { useStaffDataEntry } from './StaffDataEntryContext'
 import { Card, Form, Button, Alert, Table, Row, Col, Pagination } from 'react-bootstrap'
 import { FaSearch, FaTimes, FaFilter } from 'react-icons/fa'
 
 const IodizedSaltEntry = () => {
   const { user } = useAuth()
   const isAdmin = user?.role === 'admin'
+  const { selectedBarangay, setSelectedBarangay, searchTerm, setSearchTerm, recordDate, setRecordDate, purok, setPurok, name, setName } = useStaffDataEntry()
   const [formData, setFormData] = useState({
     barangay: user?.barangay || '',
-    purok: '',
-    storeName: '',
+    purok: purok,
+    storeName: name,
     fineSaltFidel: false,
     fineSaltUFC: false,
     fineSaltPacificBay: false,
@@ -25,7 +28,7 @@ const IodizedSaltEntry = () => {
     oilUFC: false,
     oilJolly: false,
     oilOthers: '',
-    recordedDate: new Date().toISOString().split('T')[0],
+    recordedDate: recordDate,
     recordedBy: user?.username || ''
   })
   const [records, setRecords] = useState([])
@@ -34,15 +37,12 @@ const IodizedSaltEntry = () => {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [editingId, setEditingId] = useState(null)
-  const [selectedBarangay, setSelectedBarangay] = useState(user?.barangay || '')
-  const [recordDate, setRecordDate] = useState(new Date().toISOString().split('T')[0])
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
   const [recordsPerPage, setRecordsPerPage] = useState(15)
 
   // Search and Filter state
-  const [searchTerm, setSearchTerm] = useState('')
   const [filters, setFilters] = useState({
     purok: '',
   })
@@ -83,6 +83,13 @@ const IodizedSaltEntry = () => {
     if (filters.purok) {
       filtered = filtered.filter(record => record.purok === parseInt(filters.purok))
     }
+
+    filtered.sort((a, b) => {
+      if (a.purok !== b.purok) return a.purok - b.purok
+      const nameCompare = (a.storeName || '').localeCompare(b.storeName || '')
+      if (nameCompare !== 0) return nameCompare
+      return new Date(b.recordedDate) - new Date(a.recordedDate)
+    })
 
     setFilteredRecords(filtered)
     setCurrentPage(1)
@@ -140,8 +147,8 @@ const IodizedSaltEntry = () => {
 
       setFormData({
         barangay: user?.barangay || '',
-        purok: '',
-        storeName: '',
+        purok: purok,
+        storeName: name,
         fineSaltFidel: false,
         fineSaltUFC: false,
         fineSaltPacificBay: false,
@@ -192,6 +199,8 @@ const IodizedSaltEntry = () => {
       recordedDate: formattedDate,
       recordedBy: record.recordedBy || user?.username || ''
     })
+    setPurok(record.purok)
+    setName(record.storeName || '')
     setRecordDate(formattedDate)
     setEditingId(record.id)
   }
@@ -306,21 +315,13 @@ const IodizedSaltEntry = () => {
             <Row>
               <Col md={4}>
                 <Form.Group className="mb-3">
-                  <Form.Label>Record Date</Form.Label>
-                  <Form.Control
-                    type="date"
-                    value={recordDate}
-                    onChange={(e) => setRecordDate(e.target.value)}
-                    required
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={4}>
-                <Form.Group className="mb-3">
                   <Form.Label>Purok</Form.Label>
                   <Form.Select
                     value={formData.purok}
-                    onChange={(e) => setFormData({ ...formData, purok: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, purok: e.target.value })
+                      setPurok(e.target.value)
+                    }}
                     required
                   >
                     <option value="">Select Purok</option>
@@ -336,8 +337,22 @@ const IodizedSaltEntry = () => {
                   <Form.Control
                     type="text"
                     value={formData.storeName}
-                    onChange={(e) => setFormData({ ...formData, storeName: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, storeName: e.target.value })
+                      setName(e.target.value)
+                    }}
                     placeholder="Enter store name"
+                  />
+                </Form.Group>
+              </Col>
+              <Col md={4}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Record Date</Form.Label>
+                  <Form.Control
+                    type="date"
+                    value={recordDate}
+                    onChange={(e) => setRecordDate(e.target.value)}
+                    required
                   />
                 </Form.Group>
               </Col>
@@ -467,8 +482,8 @@ const IodizedSaltEntry = () => {
                 setEditingId(null)
                 setFormData({
                   barangay: user?.barangay || '',
-                  purok: '',
-                  storeName: '',
+                  purok: purok,
+                  storeName: name,
                   fineSaltFidel: false,
                   fineSaltUFC: false,
                   fineSaltPacificBay: false,
