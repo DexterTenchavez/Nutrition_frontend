@@ -15,7 +15,7 @@ import { Card, Form, Button, Alert, Table, Row, Col, Pagination, Badge, Spinner,
 import { 
   FaSearch, 
   FaTimes, 
-  FaFileExport, 
+  FaFileWord, 
   FaSync, 
   FaDatabase,
   FaPiggyBank,
@@ -27,8 +27,7 @@ import {
   FaLeaf,
   FaPaw
 } from 'react-icons/fa'
-import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
+import { exportReportToDocx } from '../utils/docxExport'
 
 const AllRecords = () => {
   const { user } = useAuth()
@@ -276,9 +275,15 @@ const AllRecords = () => {
         case 'Potable Water':
           return (
             <div className="d-flex gap-2 flex-wrap">
-              <span className="badge bg-info text-white">L1: {record.level1 || 0}</span>
-              <span className="badge bg-success text-white">L2: {record.level2 || 0}</span>
-              <span className="badge bg-warning text-white">L3: {record.level3 || 0}</span>
+              <Badge bg={record.level1 ? 'success' : 'danger'}>
+                {record.level1 ? '✅ L1' : '❌ L1'}
+              </Badge>
+              <Badge bg={record.level2 ? 'success' : 'danger'}>
+                {record.level2 ? '✅ L2' : '❌ L2'}
+              </Badge>
+              <Badge bg={record.level3 ? 'success' : 'danger'}>
+                {record.level3 ? '✅ L3' : '❌ L3'}
+              </Badge>
             </div>
           )
         case 'Iodized Salt':
@@ -373,15 +378,7 @@ const AllRecords = () => {
     setSelectedBarangay('')
   }
 
-  const handleExportPDF = () => {
-    const doc = new jsPDF('landscape')
-    const pageWidth = doc.internal.pageSize.getWidth()
-    
-    doc.setFontSize(18)
-    doc.text('All Records Report', pageWidth / 2, 15, { align: 'center' })
-    doc.setFontSize(10)
-    doc.text(`Generated: ${new Date().toLocaleString()}`, pageWidth / 2, 22, { align: 'center' })
-    
+  const handleExportDocx = async () => {
     const exportData = current.map((record, i) => {
       let details = ''
       if (record._type === 'Iodized Salt') {
@@ -400,17 +397,19 @@ const AllRecords = () => {
         details
       ]
     })
-    
-    autoTable(doc, {
-      startY: 30,
-      head: [['#', 'Type', 'Barangay', 'Purok', 'Name', 'Details']],
+
+    await exportReportToDocx({
+      titleLines: ['All Records Report'],
+      infoLines: [`Generated: ${new Date().toLocaleString()}`],
+      infoCenter: true,
+      headers: ['#', 'Type', 'Barangay', 'Purok', 'Name', 'Details'],
       body: exportData,
-      theme: 'grid',
-      styles: { fontSize: 7, cellPadding: 2 },
-      headStyles: { fillColor: [220, 230, 245], textColor: 0, fontStyle: 'bold' }
+      boldLastRow: false,
+      cellFontSize: 16,
+      orientation: 'landscape',
+      signatures: { left: [], right: [] },
+      fileName: 'All_Records_Report'
     })
-    
-    doc.save('All_Records_Report.pdf')
   }
 
   const renderPagination = () => {
@@ -483,8 +482,8 @@ const AllRecords = () => {
           <Button variant="outline-secondary" size="sm" onClick={fetchAllRecords}>
             <FaSync className="me-1" /> Refresh
           </Button>
-          <Button variant="success" size="sm" onClick={handleExportPDF}>
-            <FaFileExport className="me-1" /> Export PDF
+          <Button variant="success" size="sm" onClick={handleExportDocx}>
+            <FaFileWord className="me-1" /> Export Word
           </Button>
         </div>
       </div>

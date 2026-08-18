@@ -4,6 +4,8 @@ import { useAuth } from '../../hooks/useAuth'
 import { childRecordApi } from '../../api/auth'
 import { BARANGAYS } from '../../utils/constants'
 import { useStaffDataEntry } from './StaffDataEntryContext'
+import DataEntryDropdown from './DataEntryDropdown'
+import LoadingOverlay from '../common/LoadingOverlay'
 import { Card, Form, Button, Alert, Table, Row, Col, Pagination } from 'react-bootstrap'
 import { FaSearch, FaTimes, FaFilter } from 'react-icons/fa'
 
@@ -31,6 +33,8 @@ const ChildRecordsEntry = () => {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [editingId, setEditingId] = useState(null)
+  const [deleting, setDeleting] = useState(false)
+  const [busyMessage, setBusyMessage] = useState('')
 
   const [currentPage, setCurrentPage] = useState(1)
   const [recordsPerPage, setRecordsPerPage] = useState(15)
@@ -62,6 +66,8 @@ const ChildRecordsEntry = () => {
   }, [searchTerm, records, filters])
 
   const fetchRecords = async () => {
+    setLoading(true)
+    setBusyMessage('Loading records...')
     try {
       const data = await childRecordApi.getAll()
       const filteredData = data.filter(r => r.barangay === selectedBarangay)
@@ -69,6 +75,9 @@ const ChildRecordsEntry = () => {
       setFilteredRecords(filteredData)
     } catch (error) {
       console.error('Error fetching records:', error)
+    } finally {
+      setLoading(false)
+      setBusyMessage('')
     }
   }
 
@@ -210,6 +219,7 @@ const ChildRecordsEntry = () => {
     setError('')
     setSuccess('')
     setLoading(true)
+    setBusyMessage(editingId ? 'Updating...' : 'Saving...')
 
     try {
       const ageMonths = parseInt(formData.ageMonths)
@@ -283,6 +293,7 @@ const ChildRecordsEntry = () => {
       setError(errorMsg)
     } finally {
       setLoading(false)
+      setBusyMessage('')
     }
   }
 
@@ -306,11 +317,14 @@ const ChildRecordsEntry = () => {
 
   const handleDelete = async (id) => {
     if (!confirm('Are you sure you want to delete this record?')) return
+    setDeleting(true)
     try {
       await childRecordApi.delete(id)
       fetchRecords()
     } catch (error) {
       alert('Error deleting record')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -395,9 +409,13 @@ const ChildRecordsEntry = () => {
 
   return (
     <div>
+      <LoadingOverlay show={loading || deleting} message={deleting ? 'Deleting...' : busyMessage} />
       <h4 className="mb-4">Vitamin A Records</h4>
 
       <Row className="mb-3">
+        <Col md={4}>
+          <DataEntryDropdown />
+        </Col>
         <Col md={4}>
           <Form.Group>
             <Form.Label>Barangay</Form.Label>

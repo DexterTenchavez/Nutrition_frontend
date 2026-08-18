@@ -3,8 +3,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { animalDispersalApi } from '../../api/reports'
 import { BARANGAYS } from '../../utils/constants'
 import { Card, Form, Button, Alert, Table, Row, Col, Spinner } from 'react-bootstrap'
-import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
+import { exportReportToDocx } from '../../utils/docxExport'
 import nutritionLogo from '../../assets/nutritionlogo.jpg'
 
 const AnimalDispersalReport = () => {
@@ -94,78 +93,52 @@ const AnimalDispersalReport = () => {
     setReport({ purokReports, total, barangay, year: yearDisplay, startDate, endDate })
   }
 
-  const handleExportPDF = () => {
+  const handleExportDocx = async () => {
     if (!report) return
 
-    const doc = new jsPDF()
-    const pageWidth = doc.internal.pageSize.getWidth()
     const barangayName = barangay.toUpperCase()
-
-    const logoImg = new Image()
-    logoImg.src = nutritionLogo
-    doc.addImage(logoImg, 'JPEG', 14, 8, 22, 22)
-
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(14)
-    doc.text('CONSOLIDATED REPORT ON', pageWidth / 2, 18, { align: 'center' })
-    doc.text('HOUSEHOLD WITH MALNOURISHED', pageWidth / 2, 26, { align: 'center' })
-    doc.text(`CHILDREN RECEIVED ANIMAL DISPERSAL ${report.year}`, pageWidth / 2, 34, { align: 'center' })
-
-    doc.setFontSize(11)
-    doc.text(`BARANGAY: ${barangayName}`, 14, 46)
-    doc.text(`DATE: ${new Date(report.startDate).toLocaleDateString()} - ${new Date(report.endDate).toLocaleDateString()}`, 14, 54)
 
     const body = report.purokReports.map((p) => [
       p.purok,
       p.householdsReceived || 0,
-      p.chickenMale || '', p.chickenFemale || '',
-      p.pigMale || '', p.pigFemale || '',
-      p.goatMale || '', p.goatFemale || '',
-      p.cowMale || '', p.cowFemale || '',
-      p.carabaoMale || '', p.carabaoFemale || '',
+      p.chickenMale || 0, p.chickenFemale || 0,
+      p.pigMale || 0, p.pigFemale || 0,
+      p.goatMale || 0, p.goatFemale || 0,
+      p.cowMale || 0, p.cowFemale || 0,
+      p.carabaoMale || 0, p.carabaoFemale || 0,
       ''
     ])
 
     body.push([
       'TOTAL',
       report.total.householdsReceived || 0,
-      report.total.chickenMale || '', report.total.chickenFemale || '',
-      report.total.pigMale || '', report.total.pigFemale || '',
-      report.total.goatMale || '', report.total.goatFemale || '',
-      report.total.cowMale || '', report.total.cowFemale || '',
-      report.total.carabaoMale || '', report.total.carabaoFemale || '',
+      report.total.chickenMale || 0, report.total.chickenFemale || 0,
+      report.total.pigMale || 0, report.total.pigFemale || 0,
+      report.total.goatMale || 0, report.total.goatFemale || 0,
+      report.total.cowMale || 0, report.total.cowFemale || 0,
+      report.total.carabaoMale || 0, report.total.carabaoFemale || 0,
       ''
     ])
 
-    autoTable(doc, {
-      startY: 60,
-      head: [
-        ['PUROK', 'Households Received', 'Chicken M', 'Chicken F', 'Pig M', 'Pig F', 'Goat M', 'Goat F', 'Cow M', 'Cow F', 'Carabao M', 'Carabao F', 'Signature']
+    await exportReportToDocx({
+      titleLines: [
+        'CONSOLIDATED REPORT ON',
+        'HOUSEHOLD WITH MALNOURISHED',
+        `CHILDREN RECEIVED ANIMAL DISPERSAL ${report.year}`
       ],
+      infoLines: [
+        `BARANGAY: ${barangayName}`,
+        `DATE: ${new Date(report.startDate).toLocaleDateString()} - ${new Date(report.endDate).toLocaleDateString()}`
+      ],
+      headers: ['PUROK', 'Households Received', 'Chicken M', 'Chicken F', 'Pig M', 'Pig F', 'Goat M', 'Goat F', 'Cow M', 'Cow F', 'Carabao M', 'Carabao F', 'Signature'],
       body,
-      theme: 'grid',
-      styles: { halign: 'center', fontSize: 8, cellPadding: 3 },
-      headStyles: { fillColor: [255, 255, 255], textColor: 0, fontStyle: 'bold', lineWidth: 0.3 },
-      bodyStyles: { lineWidth: 0.3 },
-      columnStyles: { 0: { halign: 'center', fontStyle: 'bold' } }
+      cellFontSize: 14,
+      signatures: {
+        left: [{ label: 'CERTIFIED CORRECT:', name: certifiedName, position: certifiedPosition }],
+        right: [{ label: 'APPROVED BY:', name: approvedName, position: approvedPosition }]
+      },
+      fileName: `Animal_Dispersal_Report_${barangayName}_${report.year}`
     })
-
-    const finalY = doc.lastAutoTable.finalY + 25
-
-    doc.setFontSize(10)
-    doc.setFont('helvetica', 'bold')
-    doc.text('CERTIFIED CORRECT:', 14, finalY)
-    doc.setFont('helvetica', 'normal')
-    doc.text(certifiedName || '________________', 60, finalY)
-    doc.text(certifiedPosition || 'BNS', 65, finalY + 6)
-
-    doc.setFont('helvetica', 'bold')
-    doc.text('APPROVED BY:', pageWidth - 80, finalY)
-    doc.setFont('helvetica', 'normal')
-    doc.text(approvedName || '________________', pageWidth - 45, finalY)
-    doc.text(approvedPosition || 'BRGY. CAPTAIN', pageWidth - 45, finalY + 6)
-
-    doc.save(`Animal_Dispersal_Report_${barangayName}_${report.year}.pdf`)
   }
 
   return (
@@ -246,8 +219,8 @@ const AnimalDispersalReport = () => {
                 />
                 <span className="text-muted">Animal Dispersal Report</span>
               </div>
-              <Button variant="success" onClick={handleExportPDF}>
-                <i className="bi bi-file-pdf-fill me-2"></i>Export PDF
+              <Button variant="success" onClick={handleExportDocx}>
+                <i className="bi bi-file-earmark-word-fill me-2"></i>Export Word
               </Button>
             </div>
 
@@ -259,7 +232,7 @@ const AnimalDispersalReport = () => {
               <p className="mb-0"><strong>DATE:</strong> {new Date(report.startDate).toLocaleDateString()} - {new Date(report.endDate).toLocaleDateString()}</p>
             </div>
 
-            <Table bordered className="mb-4" size="sm">
+            <Table bordered responsive className="mb-4" size="sm">
               <thead>
                 <tr className="text-center">
                   <th rowSpan="2">PUROK</th>

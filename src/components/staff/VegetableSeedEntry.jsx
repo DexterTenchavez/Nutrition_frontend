@@ -4,6 +4,8 @@ import { useAuth } from '../../hooks/useAuth'
 import { vegetableSeedApi } from '../../api/reports'
 import { BARANGAYS } from '../../utils/constants'
 import { useStaffDataEntry } from './StaffDataEntryContext'
+import DataEntryDropdown from './DataEntryDropdown'
+import LoadingOverlay from '../common/LoadingOverlay'
 import { Card, Form, Button, Alert, Table, Row, Col, Pagination } from 'react-bootstrap'
 import { FaSearch, FaTimes, FaFilter } from 'react-icons/fa'
 
@@ -25,6 +27,8 @@ const VegetableSeedEntry = () => {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [editingId, setEditingId] = useState(null)
+  const [deleting, setDeleting] = useState(false)
+  const [busyMessage, setBusyMessage] = useState('')
   const [refreshTrigger, setRefreshTrigger] = useState(0)
 
   // Pagination state
@@ -48,12 +52,17 @@ const VegetableSeedEntry = () => {
   }, [searchTerm, records, filters])
 
   const fetchRecords = async () => {
+    setLoading(true)
+    setBusyMessage('Loading records...')
     try {
       const data = await vegetableSeedApi.getByBarangay(selectedBarangay, 0)
       setRecords(data)
       setFilteredRecords(data)
     } catch (error) {
       console.error('Error fetching records:', error)
+    } finally {
+      setLoading(false)
+      setBusyMessage('')
     }
   }
 
@@ -137,6 +146,7 @@ const VegetableSeedEntry = () => {
     setError('')
     setSuccess('')
     setLoading(true)
+    setBusyMessage(editingId ? 'Updating...' : 'Saving...')
 
     try {
       // Filter out empty seed types
@@ -181,6 +191,7 @@ const VegetableSeedEntry = () => {
       setError(errorMsg)
     } finally {
       setLoading(false)
+      setBusyMessage('')
     }
   }
 
@@ -215,12 +226,15 @@ const VegetableSeedEntry = () => {
 
   const handleDelete = async (id) => {
     if (!confirm('Are you sure you want to delete this record?')) return
+    setDeleting(true)
     try {
       await vegetableSeedApi.delete(id)
       setSuccess('Record deleted successfully!')
       setTimeout(() => refreshData(), 300)
     } catch (error) {
       alert('Error deleting record')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -309,9 +323,13 @@ const VegetableSeedEntry = () => {
 
   return (
     <div>
+      <LoadingOverlay show={loading || deleting} message={deleting ? 'Deleting...' : busyMessage} />
       <h4 className="mb-4">Poor Families Given Vegetable Seeds</h4>
 
       <Row className="mb-3">
+        <Col md={4}>
+          <DataEntryDropdown />
+        </Col>
         <Col md={4}>
           <Form.Group>
             <Form.Label>Barangay</Form.Label>
@@ -546,7 +564,6 @@ const VegetableSeedEntry = () => {
             <thead>
               <tr>
                 <th>#</th>
-                <th>Barangay</th>
                 <th>Purok</th>
                 <th>Household Name</th>
                 <th>Seeds Given</th>
@@ -567,7 +584,6 @@ const VegetableSeedEntry = () => {
                 currentRecords.map((record, index) => (
                   <tr key={record.id}>
                     <td>{indexOfFirstRecord + index + 1}</td>
-                    <td>{record.barangay}</td>
                     <td>Purok {record.purok}</td>
                     <td>{record.householdName}</td>
                     <td>{renderSeedTypes(record)}</td>

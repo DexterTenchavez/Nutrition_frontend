@@ -26,6 +26,7 @@
 
 .report-content {
   flex: 1;
+  min-width: 0;
   padding: 24px;
   transition: margin-left 0.3s ease;
   overflow-y: auto;
@@ -189,4 +190,102 @@
 
 .report-sidebar::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
+}
+
+/* Mobile report navigation (hidden on desktop) */
+.overall-report-mobile-nav {
+  display: none;
+  margin-bottom: 16px;
+  max-width: 420px;
+}
+
+/* Responsive */
+@media (max-width: 991px) {
+  .report-content {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .report-layout {
+    display: block;
+    min-height: 0;
+  }
+
+  .report-sidebar {
+    display: none;
+  }
+
+  .report-content {
+    max-height: none;
+    overflow: visible;
+    overflow-x: hidden;
+    padding: 12px;
+    margin-left: 0 !important;
+  }
+
+  .overall-report-mobile-nav {
+    display: block;
+    max-width: none;
+  }
+
+  .report-mobile-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #0B4F4A;
+    margin-bottom: 6px;
+  }
+
+  /* Stack report rows and form columns on phones */
+  .report-content .row {
+    flex-direction: column;
+  }
+
+  .report-content .row > [class*='col'] {
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
+    margin-bottom: 10px;
+  }
+
+  .report-content .row > [class*='col']:last-child {
+    margin-bottom: 0;
+  }
+
+  /* Let headers wrap so the Export button stays on screen */
+  .report-content .d-flex.justify-content-between,
+  .report-content .d-flex.align-items-center {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .report-content .btn-success {
+    width: 100%;
+  }
+
+  .report-content .card-body {
+    padding: 0.9rem;
+  }
+
+  /* Tables keep a readable width and scroll instead of squishing */
+  .report-content .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .report-content .table-responsive > .table {
+    white-space: nowrap;
+    font-size: 0.8rem;
+  }
+
+  .report-content h1 {
+    font-size: 1.4rem;
+  }
+
+  .report-content h4 {
+    font-size: 1.2rem;
+  }
+
+  .report-content h5 {
+    font-size: 1.05rem;
+  }
 }

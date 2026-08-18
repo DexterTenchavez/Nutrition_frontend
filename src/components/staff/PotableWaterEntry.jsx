@@ -4,6 +4,8 @@ import { useAuth } from '../../hooks/useAuth'
 import { potableWaterApi } from '../../api/reports'
 import { BARANGAYS } from '../../utils/constants'
 import { useStaffDataEntry } from './StaffDataEntryContext'
+import DataEntryDropdown from './DataEntryDropdown'
+import LoadingOverlay from '../common/LoadingOverlay'
 import { Card, Form, Button, Alert, Table, Row, Col, Pagination } from 'react-bootstrap'
 import { FaSearch, FaTimes, FaFilter } from 'react-icons/fa'
 
@@ -14,9 +16,9 @@ const PotableWaterEntry = () => {
     barangay: user?.barangay || '',
     purok: purok,
     householdName: name,
-    level1: '0',
-    level2: '0',
-    level3: '0',
+    level1: false,
+    level2: false,
+    level3: false,
     recordedDate: recordDate,
     recordedBy: user?.username || ''
   })
@@ -26,6 +28,8 @@ const PotableWaterEntry = () => {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [editingId, setEditingId] = useState(null)
+  const [deleting, setDeleting] = useState(false)
+  const [busyMessage, setBusyMessage] = useState('')
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
@@ -49,6 +53,7 @@ const PotableWaterEntry = () => {
 
   const fetchRecords = async () => {
     setLoading(true)
+    setBusyMessage('Loading records...')
     try {
       // Try to fetch all records by using year 0
       const data = await potableWaterApi.getByBarangay(selectedBarangay, 0)
@@ -78,6 +83,7 @@ const PotableWaterEntry = () => {
       }
     } finally {
       setLoading(false)
+      setBusyMessage('')
     }
   }
 
@@ -142,6 +148,7 @@ const PotableWaterEntry = () => {
     setError('')
     setSuccess('')
     setLoading(true)
+    setBusyMessage(editingId ? 'Updating...' : 'Saving...')
 
     try {
       // Use formData.recordedDate for the year
@@ -151,9 +158,9 @@ const PotableWaterEntry = () => {
         ...formData,
         purok: parseInt(formData.purok),
         householdName: formData.householdName,
-        level1: parseInt(formData.level1) || 0,
-        level2: parseInt(formData.level2) || 0,
-        level3: parseInt(formData.level3) || 0,
+        level1: !!formData.level1,
+        level2: !!formData.level2,
+        level3: !!formData.level3,
         year: year,
         recordedDate: formData.recordedDate
       }
@@ -171,9 +178,9 @@ const PotableWaterEntry = () => {
         barangay: user?.barangay || '',
         purok: purok,
         householdName: name,
-        level1: '0',
-        level2: '0',
-        level3: '0',
+        level1: false,
+        level2: false,
+        level3: false,
         recordedDate: new Date().toISOString().split('T')[0],
         recordedBy: user?.username || ''
       })
@@ -184,6 +191,7 @@ const PotableWaterEntry = () => {
       setError(errorMsg)
     } finally {
       setLoading(false)
+      setBusyMessage('')
     }
   }
 
@@ -207,18 +215,14 @@ const PotableWaterEntry = () => {
 
   const handleDelete = async (id) => {
     if (!confirm('Are you sure you want to delete this record?')) return
+    setDeleting(true)
     try {
       await potableWaterApi.delete(id)
       fetchRecords()
     } catch (error) {
       alert('Error deleting record')
-    }
-  }
-
-  const handleNonNegativeInput = (e, field) => {
-    const value = e.target.value
-    if (value === '' || parseFloat(value) >= 0) {
-      setFormData({ ...formData, [field]: value })
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -290,9 +294,13 @@ const PotableWaterEntry = () => {
 
   return (
     <div>
+      <LoadingOverlay show={loading || deleting} message={deleting ? 'Deleting...' : busyMessage} />
       <h4 className="mb-4">Household Using Potable Water</h4>
 
       <Row className="mb-3">
+        <Col md={4}>
+          <DataEntryDropdown />
+        </Col>
         <Col md={4}>
           <Form.Group>
             <Form.Label>Barangay</Form.Label>
@@ -373,52 +381,43 @@ const PotableWaterEntry = () => {
               <Col md={4}>
                 <Form.Group className="mb-3">
                   <Form.Label>Level 1 (Point Source)</Form.Label>
-                  <Form.Control
-                    type="number"
-                    min="0"
-                    value={formData.level1}
-                    onChange={(e) => handleNonNegativeInput(e, 'level1')}
-                    placeholder="0"
-                    onKeyDown={(e) => {
-                      if (e.key === '-' || e.key === 'e') {
-                        e.preventDefault()
-                      }
-                    }}
-                  />
+                  <div>
+                    <Form.Check
+                      type="switch"
+                      id="level1-switch"
+                      label={formData.level1 ? '✅ Yes' : '❌ No'}
+                      checked={formData.level1}
+                      onChange={(e) => setFormData({ ...formData, level1: e.target.checked })}
+                    />
+                  </div>
                 </Form.Group>
               </Col>
               <Col md={4}>
                 <Form.Group className="mb-3">
                   <Form.Label>Level 2 (Communal Faucet)</Form.Label>
-                  <Form.Control
-                    type="number"
-                    min="0"
-                    value={formData.level2}
-                    onChange={(e) => handleNonNegativeInput(e, 'level2')}
-                    placeholder="0"
-                    onKeyDown={(e) => {
-                      if (e.key === '-' || e.key === 'e') {
-                        e.preventDefault()
-                      }
-                    }}
-                  />
+                  <div>
+                    <Form.Check
+                      type="switch"
+                      id="level2-switch"
+                      label={formData.level2 ? '✅ Yes' : '❌ No'}
+                      checked={formData.level2}
+                      onChange={(e) => setFormData({ ...formData, level2: e.target.checked })}
+                    />
+                  </div>
                 </Form.Group>
               </Col>
               <Col md={4}>
                 <Form.Group className="mb-3">
                   <Form.Label>Level 3 (Individual Connection)</Form.Label>
-                  <Form.Control
-                    type="number"
-                    min="0"
-                    value={formData.level3}
-                    onChange={(e) => handleNonNegativeInput(e, 'level3')}
-                    placeholder="0"
-                    onKeyDown={(e) => {
-                      if (e.key === '-' || e.key === 'e') {
-                        e.preventDefault()
-                      }
-                    }}
-                  />
+                  <div>
+                    <Form.Check
+                      type="switch"
+                      id="level3-switch"
+                      label={formData.level3 ? '✅ Yes' : '❌ No'}
+                      checked={formData.level3}
+                      onChange={(e) => setFormData({ ...formData, level3: e.target.checked })}
+                    />
+                  </div>
                 </Form.Group>
               </Col>
             </Row>
@@ -433,9 +432,9 @@ const PotableWaterEntry = () => {
                   barangay: user?.barangay || '',
                   purok: purok,
                   householdName: name,
-                  level1: '0',
-                  level2: '0',
-                  level3: '0',
+                  level1: false,
+                  level2: false,
+                  level3: false,
                   recordedDate: new Date().toISOString().split('T')[0],
                   recordedBy: user?.username || ''
                 })
@@ -524,7 +523,6 @@ const PotableWaterEntry = () => {
               <thead>
                 <tr>
                   <th>#</th>
-                  <th>Barangay</th>
                   <th>Purok</th>
                   <th>Household Name</th>
                   <th>Level 1</th>
@@ -547,12 +545,23 @@ const PotableWaterEntry = () => {
                   currentRecords.map((record, index) => (
                     <tr key={record.id}>
                       <td>{indexOfFirstRecord + index + 1}</td>
-                      <td>{record.barangay}</td>
                       <td>Purok {record.purok}</td>
                       <td>{record.householdName}</td>
-                      <td>{record.level1}</td>
-                      <td>{record.level2}</td>
-                      <td>{record.level3}</td>
+                      <td>
+                        <span className={`badge ${record.level1 ? 'bg-success' : 'bg-danger'}`}>
+                          {record.level1 ? 'Yes' : 'No'}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={`badge ${record.level2 ? 'bg-success' : 'bg-danger'}`}>
+                          {record.level2 ? 'Yes' : 'No'}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={`badge ${record.level3 ? 'bg-success' : 'bg-danger'}`}>
+                          {record.level3 ? 'Yes' : 'No'}
+                        </span>
+                      </td>
                       <td>{record.recordedDate ? new Date(record.recordedDate).toLocaleDateString() : 'N/A'}</td>
                       <td>
                         <Button variant="outline-primary" size="sm" onClick={() => handleEdit(record)}>

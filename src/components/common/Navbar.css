@@ -18,11 +18,19 @@
   width: 34px;
   height: 34px;
   border-radius: 9px;
-  background: #E3A008;
+  background: #F5F1E8;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.app-navbar .brand-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .app-navbar .brand-icon svg {
@@ -130,4 +138,113 @@
 .app-navbar .logout-btn:focus-visible {
   outline: 2px solid #E3A008;
   outline-offset: 2px;
+}
+
+/* =====================================================
+   Mobile / phone responsive navbar (below lg breakpoint)
+   ===================================================== */
+@media (max-width: 991.98px) {
+  .app-navbar {
+    padding: 0.5rem 0;
+  }
+
+  .app-navbar .brand-mark {
+    font-size: 0.95rem;
+    min-width: 0;
+    margin-right: auto;
+  }
+
+  .app-navbar .brand-mark > span:last-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .app-navbar .brand-sub {
+    font-size: 0.6rem;
+    letter-spacing: 0.05em;
+  }
+
+  /* Themed hamburger toggle */
+  .app-navbar .navbar-toggler {
+    border-color: rgba(255, 255, 255, 0.35);
+    padding: 0.3rem 0.5rem;
+  }
+
+  .app-navbar .navbar-toggler:focus {
+    box-shadow: 0 0 0 0.15rem rgba(227, 160, 8, 0.4);
+  }
+
+  .app-navbar .navbar-toggler-icon {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba(245,241,232,0.85)' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+  }
+
+  /* Collapsed menu spacing */
+  .app-navbar .navbar-collapse {
+    padding-top: 0.75rem;
+  }
+
+  /* Touch-friendly nav links */
+  .app-navbar .navbar-nav .nav-link {
+    font-size: 1rem;
+    padding: 0.7rem 0.4rem !important;
+    margin: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  }
+
+  .app-navbar .nav-link::after {
+    left: 0.4rem;
+    right: 0.4rem;
+    bottom: 0.3rem;
+  }
+
+  /* User chip full width on mobile */
+  .app-navbar .user-chip {
+    width: 100%;
+    justify-content: space-between;
+    margin-top: 0.85rem !important;
+    padding: 0.5rem 0.6rem 0.5rem 0.9rem;
+  }
+
+  .app-navbar .username-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .app-navbar .logout-btn {
+    flex-shrink: 0;
+  }
+}
+
+/* Extra-small screens */
+@media (max-width: 420px) {
+  .app-navbar .brand-mark {
+    font-size: 0.88rem;
+  }
+
+.app-navbar .brand-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: #F5F1E8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.app-navbar .brand-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+  .app-navbar .brand-icon svg {
+    width: 17px;
+    height: 17px;
+  }
 }

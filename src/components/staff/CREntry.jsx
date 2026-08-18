@@ -4,6 +4,8 @@ import { useAuth } from '../../hooks/useAuth'
 import { crApi } from '../../api/reports'
 import { BARANGAYS } from '../../utils/constants'
 import { useStaffDataEntry } from './StaffDataEntryContext'
+import DataEntryDropdown from './DataEntryDropdown'
+import LoadingOverlay from '../common/LoadingOverlay'
 import { Card, Form, Button, Alert, Table, Row, Col, Pagination } from 'react-bootstrap'
 import { FaSearch, FaTimes, FaFilter } from 'react-icons/fa'
 
@@ -15,7 +17,8 @@ const CREntry = () => {
     barangay: user?.barangay || '',
     purok: purok,
     householdName: name,
-    cr: '0',
+    withCR: false,
+    withoutCR: true,
     recordedDate: recordDate,
     recordedBy: user?.username || ''
   })
@@ -25,6 +28,8 @@ const CREntry = () => {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [editingId, setEditingId] = useState(null)
+  const [deleting, setDeleting] = useState(false)
+  const [busyMessage, setBusyMessage] = useState('')
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
@@ -48,6 +53,8 @@ const CREntry = () => {
   }, [searchTerm, records, filters])
 
   const fetchRecords = async () => {
+    setLoading(true)
+    setBusyMessage('Loading records...')
     try {
       // Use year 0 to fetch all records
       const data = await crApi.getByBarangay(selectedBarangay, 0)
@@ -55,6 +62,9 @@ const CREntry = () => {
       setFilteredRecords(data)
     } catch (error) {
       console.error('Error fetching records:', error)
+    } finally {
+      setLoading(false)
+      setBusyMessage('')
     }
   }
 
@@ -122,21 +132,12 @@ const CREntry = () => {
     setCurrentPage(1)
   }
 
-  // Handle With CR toggle - turns off Without CR
-  const handleWithCRChange = (checked) => {
-    setFormData({ 
-      ...formData, 
+  // Handle CR toggle - on means the household has CR, off means no CR
+  const handleCRChange = (checked) => {
+    setFormData({
+      ...formData,
       withCR: checked,
-      withoutCR: checked ? false : formData.withoutCR
-    })
-  }
-
-  // Handle Without CR toggle - turns off With CR
-  const handleWithoutCRChange = (checked) => {
-    setFormData({ 
-      ...formData, 
-      withoutCR: checked,
-      withCR: checked ? false : formData.withCR
+      withoutCR: !checked
     })
   }
 
@@ -145,6 +146,7 @@ const CREntry = () => {
     setError('')
     setSuccess('')
     setLoading(true)
+    setBusyMessage(editingId ? 'Updating...' : 'Saving...')
 
     try {
       const year = new Date(formData.recordedDate).getFullYear()
@@ -172,7 +174,7 @@ const CREntry = () => {
         purok: purok,
         householdName: name,
         withCR: false,
-        withoutCR: false,
+        withoutCR: true,
         recordedDate: new Date().toISOString().split('T')[0],
         recordedBy: user?.username || ''
       })
@@ -183,6 +185,7 @@ const CREntry = () => {
       setError(errorMsg)
     } finally {
       setLoading(false)
+      setBusyMessage('')
     }
   }
 
@@ -194,7 +197,7 @@ const CREntry = () => {
       purok: record.purok,
       householdName: record.householdName || '',
       withCR: record.withCR,
-      withoutCR: record.withoutCR,
+      withoutCR: !record.withCR,
       recordedDate: formattedDate,
       recordedBy: record.recordedBy || user?.username || ''
     })
@@ -205,11 +208,14 @@ const CREntry = () => {
 
   const handleDelete = async (id) => {
     if (!confirm('Are you sure you want to delete this record?')) return
+    setDeleting(true)
     try {
       await crApi.delete(id)
       fetchRecords()
     } catch (error) {
       alert('Error deleting record')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -280,19 +286,15 @@ const CREntry = () => {
 
   const pageSizeOptions = [5, 10, 15, 25, 50, 100]
 
-  // Helper function to get CR status display
-  const getCRStatus = (record) => {
-    if (record.withCR && record.withoutCR) return 'Both'
-    if (record.withCR) return 'With CR'
-    if (record.withoutCR) return 'Without CR'
-    return 'None'
-  }
-
   return (
     <div>
+      <LoadingOverlay show={loading || deleting} message={deleting ? 'Deleting...' : busyMessage} />
       <h4 className="mb-4">With & Without CR</h4>
 
       <Row className="mb-3">
+        <Col md={4}>
+          <DataEntryDropdown />
+        </Col>
         <Col md={4}>
           <Form.Group>
             <Form.Label>Barangay</Form.Label>
@@ -370,30 +372,16 @@ const CREntry = () => {
             </Row>
 
             <Row className="mt-3">
-              <Col md={6}>
+              <Col md={12}>
                 <Form.Group className="mb-3">
-                  <Form.Label>With CR</Form.Label>
+                  <Form.Label>Has CR?</Form.Label>
                   <div>
                     <Form.Check
                       type="switch"
-                      id="withCR-switch"
-                      label={formData.withCR ? '✅ Yes' : '❌ No'}
+                      id="cr-switch"
+                      label={formData.withCR ? '✅ With CR' : '❌ Without CR'}
                       checked={formData.withCR}
-                      onChange={(e) => handleWithCRChange(e.target.checked)}
-                    />
-                  </div>
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>Without CR</Form.Label>
-                  <div>
-                    <Form.Check
-                      type="switch"
-                      id="withoutCR-switch"
-                      label={formData.withoutCR ? '✅ Yes' : '❌ No'}
-                      checked={formData.withoutCR}
-                      onChange={(e) => handleWithoutCRChange(e.target.checked)}
+                      onChange={(e) => handleCRChange(e.target.checked)}
                     />
                   </div>
                 </Form.Group>
@@ -411,7 +399,7 @@ const CREntry = () => {
                   purok: purok,
                   householdName: name,
                   withCR: false,
-                  withoutCR: false,
+                  withoutCR: true,
                   recordedDate: new Date().toISOString().split('T')[0],
                   recordedBy: user?.username || ''
                 })
@@ -506,12 +494,9 @@ const CREntry = () => {
             <thead>
               <tr>
                 <th>#</th>
-                <th>Barangay</th>
                 <th>Purok</th>
                 <th>Household Name</th>
-                <th>With CR</th>
-                <th>Without CR</th>
-                <th>Status</th>
+                <th>CR Status</th>
                 <th>Recorded Date</th>
                 <th>Actions</th>
               </tr>
@@ -519,7 +504,7 @@ const CREntry = () => {
             <tbody>
               {currentRecords.length === 0 ? (
                 <tr>
-                  <td colSpan="9" className="text-center py-3 text-muted">
+                  <td colSpan="6" className="text-center py-3 text-muted">
                     {searchTerm || Object.values(filters).some(v => v) 
                       ? 'No records found matching your filters' 
                       : 'No records found'}
@@ -529,27 +514,11 @@ const CREntry = () => {
                 currentRecords.map((record, index) => (
                   <tr key={record.id}>
                     <td>{indexOfFirstRecord + index + 1}</td>
-                    <td>{record.barangay}</td>
                     <td>Purok {record.purok}</td>
                     <td>{record.householdName}</td>
                     <td>
-                      <span className={record.withCR ? 'text-success' : 'text-danger'}>
-                        {record.withCR ? '✅' : '❌'}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={record.withoutCR ? 'text-success' : 'text-danger'}>
-                        {record.withoutCR ? '✅' : '❌'}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`badge ${
-                        record.withCR && record.withoutCR ? 'bg-success' :
-                        record.withCR ? 'bg-primary' :
-                        record.withoutCR ? 'bg-warning' :
-                        'bg-secondary'
-                      }`}>
-                        {getCRStatus(record)}
+                      <span className={`badge ${record.withCR ? 'bg-success' : 'bg-warning'}`}>
+                        {record.withCR ? '✅ With CR' : '❌ Without CR'}
                       </span>
                     </td>
                     <td>{record.recordedDate ? new Date(record.recordedDate).toLocaleDateString() : 'N/A'}</td>

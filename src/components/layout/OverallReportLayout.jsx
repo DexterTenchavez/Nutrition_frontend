@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import OverallReportSidebar from './OverallReportSidebar'
+import OverallReportDropdown from './OverallReportDropdown'
 import './css/ReportLayout.css'
 
 const OverallReportLayout = () => {
@@ -20,6 +21,9 @@ const OverallReportLayout = () => {
         />
       </div>
       <div className={`report-content ${sidebarCollapsed ? 'expanded' : ''}`}>
+        <div className="overall-report-mobile-nav">
+          <OverallReportDropdown />
+        </div>
         <Outlet />
       </div>
     </div>

@@ -3,8 +3,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { childRecordApi } from '../../api/auth'
 import { BARANGAYS } from '../../utils/constants'
 import { Card, Form, Button, Alert, Table, Row, Col, Spinner } from 'react-bootstrap'
-import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
+import { exportReportToDocx } from '../../utils/docxExport'
 import nutritionLogo from '../../assets/nutritionlogo.jpg'
 
 const ChildRecordsReport = () => {
@@ -82,31 +81,16 @@ const ChildRecordsReport = () => {
     setReport({ purokReports, total, barangay: barangayName, year: yearDisplay, startDate, endDate })
   }
 
-  const handleExportPDF = () => {
+  const handleExportDocx = async () => {
     if (!report) return
 
-    const doc = new jsPDF()
-    const pageWidth = doc.internal.pageSize.getWidth()
     const barangayName = report.barangay.toUpperCase()
-
-    const logoImg = new Image()
-    logoImg.src = nutritionLogo
-    doc.addImage(logoImg, 'JPEG', 14, 8, 22, 22)
-
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(14)
-    doc.text('CONSOLIDATED REPORT ON GIVEN', pageWidth / 2, 18, { align: 'center' })
-    doc.text(`VITAMIN A SUPPLEMENTARY CY:${report.year}`, pageWidth / 2, 26, { align: 'center' })
-
-    doc.setFontSize(11)
-    doc.text(`BARANGAY: ${barangayName}`, 14, 38)
-    doc.text(`DATE: ${new Date(report.startDate).toLocaleDateString()} - ${new Date(report.endDate).toLocaleDateString()}`, 14, 46)
 
     const body = report.purokReports.map((p) => [
       p.purok,
-      p.months6To11 || '',
-      p.months12To59 || '',
-      p.underweightSUW || ''
+      p.months6To11 || 0,
+      p.months12To59 || 0,
+      p.underweightSUW || 0
     ])
 
     body.push([
@@ -116,33 +100,23 @@ const ChildRecordsReport = () => {
       report.total.underweightSUW || 0
     ])
 
-    autoTable(doc, {
-      startY: 52,
-      head: [['PUROK', '6 - 11 MONTHS', '12 - 59 MONTHS', 'UNDERWEIGHT\nAND SUW']],
+    await exportReportToDocx({
+      titleLines: [
+        'CONSOLIDATED REPORT ON GIVEN',
+        `VITAMIN A SUPPLEMENTARY CY:${report.year}`
+      ],
+      infoLines: [
+        `BARANGAY: ${barangayName}`,
+        `DATE: ${new Date(report.startDate).toLocaleDateString()} - ${new Date(report.endDate).toLocaleDateString()}`
+      ],
+      headers: ['PUROK', '6 - 11 MONTHS', '12 - 59 MONTHS', 'UNDERWEIGHT AND SUW'],
       body,
-      theme: 'grid',
-      styles: { halign: 'center', fontSize: 10, cellPadding: 4 },
-      headStyles: { fillColor: [255, 255, 255], textColor: 0, fontStyle: 'bold', lineWidth: 0.3 },
-      bodyStyles: { lineWidth: 0.3 },
-      columnStyles: { 0: { halign: 'center', fontStyle: 'bold' } }
+      signatures: {
+        left: [{ label: 'CERTIFIED CORRECT:', name: certifiedName, position: certifiedPosition }],
+        right: [{ label: 'APPROVED BY:', name: approvedName, position: approvedPosition }]
+      },
+      fileName: `Vitamin_A_Report_${barangayName}_${report.year}`
     })
-
-    const finalY = doc.lastAutoTable.finalY + 25
-
-    doc.setFontSize(10)
-    doc.setFont('helvetica', 'bold')
-    doc.text('CERTIFIED CORRECT:', 14, finalY)
-    doc.setFont('helvetica', 'normal')
-    doc.text(certifiedName || '________________', 60, finalY)
-    doc.text(certifiedPosition || 'BNS', 65, finalY + 6)
-
-    doc.setFont('helvetica', 'bold')
-    doc.text('APPROVED BY:', pageWidth - 80, finalY)
-    doc.setFont('helvetica', 'normal')
-    doc.text(approvedName || '________________', pageWidth - 45, finalY)
-    doc.text(approvedPosition || 'BRGY. CAPTAIN', pageWidth - 45, finalY + 6)
-
-    doc.save(`Vitamin_A_Report_${barangayName}_${report.year}.pdf`)
   }
 
   return (
@@ -225,8 +199,8 @@ const ChildRecordsReport = () => {
                 />
                 <span className="text-muted">Vitamin A Report</span>
               </div>
-              <Button variant="success" onClick={handleExportPDF}>
-                <i className="bi bi-file-pdf-fill me-2"></i>Export PDF
+              <Button variant="success" onClick={handleExportDocx}>
+                <i className="bi bi-file-earmark-word-fill me-2"></i>Export Word
               </Button>
             </div>
 
@@ -238,7 +212,7 @@ const ChildRecordsReport = () => {
               <p className="mb-0"><strong>DATE:</strong> {new Date(report.startDate).toLocaleDateString()} - {new Date(report.endDate).toLocaleDateString()}</p>
             </div>
 
-            <Table bordered className="mb-4">
+            <Table bordered responsive className="mb-4">
               <thead>
                 <tr className="text-center">
                   <th style={{ width: '15%' }}>PUROK</th>

@@ -4,6 +4,11 @@ html, body, #root {
   min-height: 100%;
 }
 
+/* Prevent any element from blowing out the page width on phones */
+html, body {
+  overflow-x: hidden;
+}
+
 /* Loading spinner */
 .loading-container {
   display: flex;

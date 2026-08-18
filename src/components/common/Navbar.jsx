@@ -1,6 +1,7 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { Navbar as BsNavbar, Nav, Container, Button } from 'react-bootstrap'
+import nutritionLogo from '../../assets/nutritionlogo.jpg'
 import './Navbar.css'
 
 const Navbar = () => {
@@ -22,10 +23,7 @@ const Navbar = () => {
       <Container>
         <BsNavbar.Brand as={Link} to="/dashboard" className="brand-mark">
           <span className="brand-icon">
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 2C12 2 6 8.5 6 13.5C6 17.09 8.69 20 12 20C15.31 20 18 17.09 18 13.5C18 8.5 12 2 12 2Z" fill="#0B4F4A"/>
-              <path d="M12 20C12 20 12 16 12 13" stroke="#F5F1E8" strokeWidth="1.4" strokeLinecap="round"/>
-            </svg>
+            <img src={nutritionLogo} alt="Nutrition Logo" />
           </span>
           <span>
             Nutrition Management

@@ -3,8 +3,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { iodizedSaltApi } from '../../api/reports'
 import { BARANGAYS } from '../../utils/constants'
 import { Card, Form, Button, Alert, Table, Row, Col, Spinner } from 'react-bootstrap'
-import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
+import { exportReportToDocx } from '../../utils/docxExport'
 import nutritionLogo from '../../assets/nutritionlogo.jpg'
 
 const IodizedSaltReport = () => {
@@ -98,25 +97,10 @@ const IodizedSaltReport = () => {
     setReport({ purokReports, total, barangay, year: yearDisplay, startDate, endDate })
   }
 
-  const handleExportPDF = () => {
+  const handleExportDocx = async () => {
     if (!report) return
 
-    const doc = new jsPDF()
-    const pageWidth = doc.internal.pageSize.getWidth()
     const barangayName = barangay.toUpperCase()
-
-    const logoImg = new Image()
-    logoImg.src = nutritionLogo
-    doc.addImage(logoImg, 'JPEG', 14, 8, 22, 22)
-
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(14)
-    doc.text('CONSOLIDATED REPORT ON SARI-SARI STORES', pageWidth / 2, 18, { align: 'center' })
-    doc.text('(RETAIL) SELLING IODIZED SALT', pageWidth / 2, 26, { align: 'center' })
-
-    doc.setFontSize(11)
-    doc.text(`BARANGAY: ${barangayName}`, 14, 38)
-    doc.text(`DATE: ${new Date(report.startDate).toLocaleDateString()} - ${new Date(report.endDate).toLocaleDateString()}`, 14, 46)
 
     const body = report.purokReports.map((p) => [
       p.purok,
@@ -134,39 +118,28 @@ const IodizedSaltReport = () => {
       report.total.oil || 0
     ])
 
-    autoTable(doc, {
-      startY: 52,
-      head: [['PUROK', 'TOTAL STORES', 'FINE SALT', 'ROCK SALT', 'COOKING OIL']],
+    await exportReportToDocx({
+      titleLines: [
+        'CONSOLIDATED REPORT ON SARI-SARI STORES',
+        '(RETAIL) SELLING IODIZED SALT'
+      ],
+      infoLines: [
+        `BARANGAY: ${barangayName}`,
+        `DATE: ${new Date(report.startDate).toLocaleDateString()} - ${new Date(report.endDate).toLocaleDateString()}`
+      ],
+      headers: ['PUROK', 'TOTAL STORES', 'FINE SALT', 'ROCK SALT', 'COOKING OIL'],
       body,
-      theme: 'grid',
-      styles: { halign: 'center', fontSize: 10, cellPadding: 4 },
-      headStyles: { fillColor: [255, 255, 255], textColor: 0, fontStyle: 'bold', lineWidth: 0.3 },
-      bodyStyles: { lineWidth: 0.3 },
-      columnStyles: { 0: { halign: 'center', fontStyle: 'bold' } }
+      signatures: {
+        left: [
+          { label: 'Prepared by:', name: certifiedName, position: certifiedPosition },
+          { label: 'Noted by:', name: notedName, position: notedPosition }
+        ],
+        right: [
+          { label: 'Approved by:', name: approvedName, position: approvedPosition }
+        ]
+      },
+      fileName: `Iodized_Salt_Report_${barangayName}_${report.year}`
     })
-
-    const finalY = doc.lastAutoTable.finalY + 25
-
-    doc.setFontSize(10)
-    doc.setFont('helvetica', 'bold')
-    doc.text('Prepared by:', 14, finalY)
-    doc.setFont('helvetica', 'normal')
-    doc.text(certifiedName || '________________', 60, finalY)
-    doc.text(certifiedPosition || 'BHW', 65, finalY + 6)
-
-    doc.setFont('helvetica', 'bold')
-    doc.text('Noted by:', 14, finalY + 14)
-    doc.setFont('helvetica', 'normal')
-    doc.text(notedName || '________________', 60, finalY + 14)
-    doc.text(notedPosition || 'BNAO', 65, finalY + 20)
-
-    doc.setFont('helvetica', 'bold')
-    doc.text('Approved by:', pageWidth - 80, finalY)
-    doc.setFont('helvetica', 'normal')
-    doc.text(approvedName || '________________', pageWidth - 45, finalY)
-    doc.text(approvedPosition || 'BNC CHAIRMAN', pageWidth - 45, finalY + 6)
-
-    doc.save(`Iodized_Salt_Report_${barangayName}_${report.year}.pdf`)
   }
 
   return (
@@ -247,8 +220,8 @@ const IodizedSaltReport = () => {
                 />
                 <span className="text-muted">Iodized Salt Stores</span>
               </div>
-              <Button variant="success" onClick={handleExportPDF}>
-                <i className="bi bi-file-pdf-fill me-2"></i>Export PDF
+              <Button variant="success" onClick={handleExportDocx}>
+                <i className="bi bi-file-earmark-word-fill me-2"></i>Export Word
               </Button>
             </div>
 
@@ -260,7 +233,7 @@ const IodizedSaltReport = () => {
               <p className="mb-0"><strong>DATE:</strong> {new Date(report.startDate).toLocaleDateString()} - {new Date(report.endDate).toLocaleDateString()}</p>
             </div>
 
-            <Table bordered className="mb-4">
+            <Table bordered responsive className="mb-4">
               <thead>
                 <tr className="text-center">
                   <th style={{ width: '12%' }}>PUROK</th>

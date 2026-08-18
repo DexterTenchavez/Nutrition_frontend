@@ -4,6 +4,8 @@ import { useAuth } from '../../hooks/useAuth'
 import { pregnantWomenApi } from '../../api/reports'
 import { BARANGAYS } from '../../utils/constants'
 import { useStaffDataEntry } from './StaffDataEntryContext'
+import DataEntryDropdown from './DataEntryDropdown'
+import LoadingOverlay from '../common/LoadingOverlay'
 import { Card, Form, Button, Alert, Table, Row, Col, Pagination } from 'react-bootstrap'
 import { FaSearch, FaTimes, FaFilter } from 'react-icons/fa'
 
@@ -27,6 +29,8 @@ const PregnantWomenEntry = () => {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [editingId, setEditingId] = useState(null)
+  const [deleting, setDeleting] = useState(false)
+  const [busyMessage, setBusyMessage] = useState('')
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
@@ -52,6 +56,8 @@ const PregnantWomenEntry = () => {
   }, [searchTerm, records, filters])
 
   const fetchRecords = async () => {
+    setLoading(true)
+    setBusyMessage('Loading records...')
   try {
     // Use year 0 to get all records
     const data = await pregnantWomenApi.getByBarangay(selectedBarangay, 0)
@@ -59,6 +65,9 @@ const PregnantWomenEntry = () => {
     setFilteredRecords(data)
   } catch (error) {
     console.error('Error fetching records:', error)
+  } finally {
+    setLoading(false)
+    setBusyMessage('')
   }
 }
 
@@ -179,6 +188,7 @@ const PregnantWomenEntry = () => {
     setError('')
     setSuccess('')
     setLoading(true)
+    setBusyMessage(editingId ? 'Updating...' : 'Saving...')
 
     try {
       const year = new Date(recordDate).getFullYear()
@@ -224,6 +234,7 @@ const PregnantWomenEntry = () => {
       setError(errorMsg)
     } finally {
       setLoading(false)
+      setBusyMessage('')
     }
   }
 
@@ -249,11 +260,14 @@ const PregnantWomenEntry = () => {
 
   const handleDelete = async (id) => {
     if (!confirm('Are you sure you want to delete this record?')) return
+    setDeleting(true)
     try {
       await pregnantWomenApi.delete(id)
       fetchRecords()
     } catch (error) {
       alert('Error deleting record')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -326,9 +340,13 @@ const PregnantWomenEntry = () => {
 
   return (
     <div>
+      <LoadingOverlay show={loading || deleting} message={deleting ? 'Deleting...' : busyMessage} />
       <h4 className="mb-4">Pregnant Women BMI Report</h4>
 
       <Row className="mb-3">
+        <Col md={4}>
+          <DataEntryDropdown />
+        </Col>
         <Col md={4}>
           <Form.Group>
             <Form.Label>Barangay</Form.Label>
@@ -578,7 +596,6 @@ const PregnantWomenEntry = () => {
             <thead>
               <tr>
                 <th>#</th>
-                <th>Barangay</th>
                 <th>Purok</th>
                 <th>Woman's Name</th>
                 <th>Weight (KG)</th>
@@ -602,7 +619,6 @@ const PregnantWomenEntry = () => {
                 currentRecords.map((record, index) => (
                   <tr key={record.id}>
                     <td>{indexOfFirstRecord + index + 1}</td>
-                    <td>{record.barangay}</td>
                     <td>Purok {record.purok}</td>
                     <td>{record.womanName}</td>
                     <td>{record.weight}</td>

@@ -4,6 +4,8 @@ import { useAuth } from '../../hooks/useAuth'
 import { backyardGardeningApi } from '../../api/reports'
 import { BARANGAYS } from '../../utils/constants'
 import { useStaffDataEntry } from './StaffDataEntryContext'
+import DataEntryDropdown from './DataEntryDropdown'
+import LoadingOverlay from '../common/LoadingOverlay'
 import { Card, Form, Button, Alert, Table, Row, Col, Pagination } from 'react-bootstrap'
 import { FaSearch, FaTimes, FaFilter } from 'react-icons/fa'
 
@@ -25,6 +27,8 @@ const BackyardGardeningEntry = () => {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [editingId, setEditingId] = useState(null)
+  const [deleting, setDeleting] = useState(false)
+  const [busyMessage, setBusyMessage] = useState('')
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
@@ -48,6 +52,8 @@ const BackyardGardeningEntry = () => {
   }, [searchTerm, records, filters])
 
   const fetchRecords = async () => {
+    setLoading(true)
+    setBusyMessage('Loading records...')
     try {
       // Fetch all records regardless of year (year = 0 means all)
       const data = await backyardGardeningApi.getByBarangay(selectedBarangay, 0)
@@ -55,6 +61,9 @@ const BackyardGardeningEntry = () => {
       setFilteredRecords(data)
     } catch (error) {
       console.error('Error fetching records:', error)
+    } finally {
+      setLoading(false)
+      setBusyMessage('')
     }
   }
 
@@ -127,6 +136,7 @@ const BackyardGardeningEntry = () => {
     setError('')
     setSuccess('')
     setLoading(true)
+    setBusyMessage(editingId ? 'Updating...' : 'Saving...')
 
     try {
       const year = new Date(formData.recordedDate).getFullYear()
@@ -163,6 +173,7 @@ const BackyardGardeningEntry = () => {
       setError(errorMsg)
     } finally {
       setLoading(false)
+      setBusyMessage('')
     }
   }
 
@@ -184,11 +195,14 @@ const BackyardGardeningEntry = () => {
 
   const handleDelete = async (id) => {
     if (!confirm('Are you sure you want to delete this record?')) return
+    setDeleting(true)
     try {
       await backyardGardeningApi.delete(id)
       fetchRecords()
     } catch (error) {
       alert('Error deleting record')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -266,9 +280,13 @@ const BackyardGardeningEntry = () => {
 
   return (
     <div>
+      <LoadingOverlay show={loading || deleting} message={deleting ? 'Deleting...' : busyMessage} />
       <h4 className="mb-4">With & Without Backyard Gardening</h4>
 
       <Row className="mb-3">
+        <Col md={4}>
+          <DataEntryDropdown />
+        </Col>
         <Col md={4}>
           <Form.Group>
             <Form.Label>Barangay</Form.Label>
@@ -470,7 +488,6 @@ const BackyardGardeningEntry = () => {
             <thead>
               <tr>
                 <th>#</th>
-                <th>Barangay</th>
                 <th>Purok</th>
                 <th>Household Name</th>
                 <th>Garden Status</th>
@@ -491,7 +508,6 @@ const BackyardGardeningEntry = () => {
                 currentRecords.map((record, index) => (
                   <tr key={record.id}>
                     <td>{indexOfFirstRecord + index + 1}</td>
-                    <td>{record.barangay}</td>
                     <td>Purok {record.purok}</td>
                     <td>{record.householdName}</td>
                     <td>

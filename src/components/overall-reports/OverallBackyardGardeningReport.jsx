@@ -2,8 +2,7 @@
 import { useState, useEffect } from 'react'
 import { backyardGardeningApi } from '../../api/reports'
 import { Card, Row, Col, Form, Spinner, Table, Button, Alert } from 'react-bootstrap'
-import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
+import { exportReportToDocx } from '../../utils/docxExport'
 import nutritionLogo from '../../assets/nutritionlogo.jpg'
 
 const OverallBackyardGardeningReport = () => {
@@ -83,32 +82,14 @@ const OverallBackyardGardeningReport = () => {
     return startYear === endYear ? startYear.toString() : `${startYear}-${endYear}`
   }
 
-  const handleExportPDF = () => {
+  const handleExportDocx = async () => {
     if (!report) return
 
-    const doc = new jsPDF()
-    const pageWidth = doc.internal.pageSize.getWidth()
     const yearDisplay = getYearDisplay()
 
-    const logoImg = new Image()
-    logoImg.src = nutritionLogo
-    doc.addImage(logoImg, 'JPEG', 14, 6, 22, 22)
-
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(11)
-    doc.text('Republic of the Philippines', pageWidth / 2, 14, { align: 'center' })
-    doc.text('Province of Bohol', pageWidth / 2, 20, { align: 'center' })
-    doc.text('Municipality of Ubay', pageWidth / 2, 26, { align: 'center' })
-    doc.text('MUNICIPAL NUTRITION COUNCIL', pageWidth / 2, 32, { align: 'center' })
-
-    doc.setFontSize(15)
-    doc.text(`BACKYARD GARDENING OVERALL REPORT ${yearDisplay}`, pageWidth / 2, 42, { align: 'center' })
-
-    let startY = 48
+    const infoLines = []
     if (startDate && endDate) {
-      doc.setFontSize(10)
-      doc.text(`DATE: ${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}`, pageWidth / 2, 48, { align: 'center' })
-      startY = 54
+      infoLines.push(`DATE: ${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}`)
     }
 
     const body = (report.barangays || []).map((b, i) => [
@@ -126,36 +107,25 @@ const OverallBackyardGardeningReport = () => {
       report.overallTotal?.total || 0
     ])
 
-    autoTable(doc, {
-      startY: startY,
-      head: [['#', 'BARANGAY', 'WITH GARDEN', 'WITHOUT GARDEN', 'TOTAL']],
+    await exportReportToDocx({
+      govLines: [
+        'Republic of the Philippines',
+        'Province of Bohol',
+        'Municipality of Ubay',
+        'MUNICIPAL NUTRITION COUNCIL'
+      ],
+      titleLines: [`BACKYARD GARDENING OVERALL REPORT ${yearDisplay}`],
+      infoLines,
+      infoCenter: true,
+      headers: ['#', 'BARANGAY', 'WITH GARDEN', 'WITHOUT GARDEN', 'TOTAL'],
       body,
-      theme: 'grid',
-      styles: { fontSize: 8, cellPadding: 2 },
-      headStyles: { fillColor: [220, 230, 245], textColor: 0, fontStyle: 'bold', halign: 'center' },
-      didParseCell: (data) => {
-        if (data.row.index === body.length - 1) {
-          data.cell.styles.fontStyle = 'bold'
-        }
-      }
+      cellFontSize: 18,
+      signatures: {
+        left: [{ label: 'PREPARED BY:', name: report.preparedBy, position: report.preparedPosition }],
+        right: [{ label: 'NOTED BY:', name: report.notedBy, position: report.notedPosition }]
+      },
+      fileName: `Overall_BackyardGardening_Report_${yearDisplay}`
     })
-
-    const finalY = doc.lastAutoTable.finalY + 20
-
-    doc.setFontSize(10)
-    doc.setFont('helvetica', 'bold')
-    doc.text('PREPARED BY:', 14, finalY)
-    doc.setFont('helvetica', 'normal')
-    doc.text(report.preparedBy || '________________', 60, finalY)
-    doc.text(report.preparedPosition || 'MNPC', 65, finalY + 6)
-
-    doc.setFont('helvetica', 'bold')
-    doc.text('NOTED BY:', pageWidth - 80, finalY)
-    doc.setFont('helvetica', 'normal')
-    doc.text(report.notedBy || '________________', pageWidth - 45, finalY)
-    doc.text(report.notedPosition || 'RN', pageWidth - 45, finalY + 6)
-
-    doc.save(`Overall_BackyardGardening_Report_${yearDisplay}.pdf`)
   }
 
   if (loading) {
@@ -204,8 +174,8 @@ const OverallBackyardGardeningReport = () => {
               Clear Dates
             </Button>
           )}
-          <Button variant="success" onClick={handleExportPDF}>
-            <i className="bi bi-file-pdf-fill me-2"></i>Export PDF
+          <Button variant="success" onClick={handleExportDocx}>
+            <i className="bi bi-file-earmark-word-fill me-2"></i>Export Word
           </Button>
         </div>
       </div>

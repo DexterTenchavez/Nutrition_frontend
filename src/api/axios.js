@@ -1,7 +1,8 @@
 import axios from 'axios'
 
 // Use environment variable for flexibility
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5210'
+const host = window.location.hostname.includes(':') ? `[${window.location.hostname}]` : window.location.hostname
+const API_URL = import.meta.env.VITE_API_URL || `http://${host}:5210`
 
 const api = axios.create({
   baseURL: `${API_URL}/api`,
