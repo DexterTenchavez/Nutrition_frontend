@@ -1,10 +1,12 @@
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { crApi } from '../../api/reports'
 import { BARANGAYS } from '../../utils/constants'
 import { useStaffDataEntry } from './StaffDataEntryContext'
 import DataEntryDropdown from './DataEntryDropdown'
+import NameSuggestionField from './NameSuggestionField'
+import './recordTable.css'
 import LoadingOverlay from '../common/LoadingOverlay'
 import { Card, Form, Button, Alert, Table, Row, Col, Pagination } from 'react-bootstrap'
 import { FaSearch, FaTimes, FaFilter } from 'react-icons/fa'
@@ -30,6 +32,7 @@ const CREntry = () => {
   const [editingId, setEditingId] = useState(null)
   const [deleting, setDeleting] = useState(false)
   const [busyMessage, setBusyMessage] = useState('')
+  const formCardRef = useRef(null)
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
@@ -39,8 +42,12 @@ const CREntry = () => {
   const [filters, setFilters] = useState({
     purok: '',
     crStatus: '',
+    startDate: '',
+    endDate: '',
   })
   const [showFilters, setShowFilters] = useState(false)
+  const [selectedIds, setSelectedIds] = useState([])
+  const [batchDeleting, setBatchDeleting] = useState(false)
 
   useEffect(() => {
     if (selectedBarangay) {
@@ -51,6 +58,10 @@ const CREntry = () => {
   useEffect(() => {
     applyFiltersAndSearch()
   }, [searchTerm, records, filters])
+
+  useEffect(() => {
+    setSelectedIds(prev => prev.filter(id => filteredRecords.some(r => r.id === id)))
+  }, [filteredRecords])
 
   const fetchRecords = async () => {
     setLoading(true)
@@ -90,6 +101,16 @@ const CREntry = () => {
       } else if (filters.crStatus === 'withoutCR') {
         filtered = filtered.filter(record => record.withoutCR === true)
       } 
+    }
+
+    if (filters.startDate || filters.endDate) {
+      filtered = filtered.filter(record => {
+        const recDate = record.recordedDate ? String(record.recordedDate).split('T')[0] : ''
+        if (!recDate) return false
+        if (filters.startDate && recDate < filters.startDate) return false
+        if (filters.endDate && recDate > filters.endDate) return false
+        return true
+      })
     }
 
     filtered.sort((a, b) => {
@@ -204,6 +225,7 @@ const CREntry = () => {
     setPurok(record.purok)
     setName(record.householdName || '')
     setEditingId(record.id)
+    formCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
   const handleDelete = async (id) => {
@@ -219,6 +241,32 @@ const CREntry = () => {
     }
   }
 
+  const handleSelectRecord = (id) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+  }
+
+  const handleSelectAll = () => {
+    if (selectedIds.length === filteredRecords.length) {
+      setSelectedIds([])
+    } else {
+      setSelectedIds(filteredRecords.map(r => r.id))
+    }
+  }
+
+  const handleBatchDelete = async () => {
+    if (!confirm(`Are you sure you want to delete ${selectedIds.length} selected record(s)?`)) return
+    setBatchDeleting(true)
+    try {
+      await crApi.deleteMany(selectedIds)
+      setSelectedIds([])
+      fetchRecords()
+    } catch (error) {
+      alert('Error deleting records')
+    } finally {
+      setBatchDeleting(false)
+    }
+  }
+
   const clearSearch = () => {
     setSearchTerm('')
   }
@@ -227,6 +275,8 @@ const CREntry = () => {
     setFilters({
       purok: '',
       crStatus: '',
+      startDate: '',
+      endDate: '',
     })
     setSearchTerm('')
     setShowFilters(false)
@@ -312,7 +362,7 @@ const CREntry = () => {
         </Col>
       </Row>
 
-      <Card className="mb-4">
+      <Card className="mb-4" ref={formCardRef}>
         <Card.Header>
           <h6 className="mb-0">{editingId ? 'Edit' : 'New'} Entry</h6>
         </Card.Header>
@@ -341,19 +391,17 @@ const CREntry = () => {
                 </Form.Group>
               </Col>
               <Col md={4}>
-                <Form.Group className="mb-3">
-                  <Form.Label>Household Name</Form.Label>
-                  <Form.Control
-                    type="text"
-                    value={formData.householdName}
-                    onChange={(e) => {
-                      setFormData({ ...formData, householdName: e.target.value })
-                      setName(e.target.value)
-                    }}
-                    required
-                    placeholder="Enter household name"
-                  />
-                </Form.Group>
+                <NameSuggestionField
+                  label="Household Name"
+                  value={formData.householdName}
+                  onChange={(value) => {
+                    setFormData({ ...formData, householdName: value })
+                    setName(value)
+                  }}
+                  suggestions={records.map((r) => r.householdName).filter(Boolean)}
+                  required
+                  placeholder="Enter household name"
+                />
               </Col>
               <Col md={4}>
                 <Form.Group className="mb-3">
@@ -415,7 +463,12 @@ const CREntry = () => {
         <Card.Header>
           <Row className="align-items-center">
             <Col>
-              <h6 className="mb-0">Records ({filteredRecords.length} total)</h6>
+              <h6 className="mb-0 d-inline">Records ({filteredRecords.length} total)</h6>
+              {selectedIds.length > 0 && (
+                <Button variant="danger" size="sm" className="ms-2" onClick={handleBatchDelete} disabled={batchDeleting}>
+                  {batchDeleting ? 'Deleting...' : `Delete Selected (${selectedIds.length})`}
+                </Button>
+              )}
             </Col>
             <Col md={6}>
               <div className="d-flex align-items-center gap-2">
@@ -485,14 +538,41 @@ const CREntry = () => {
                   </Form.Select>
                 </Form.Group>
               </Col>
+              <Col md={4}>
+                <Form.Group className="mb-2">
+                  <Form.Label>Start Date</Form.Label>
+                  <Form.Control
+                    type="date"
+                    value={filters.startDate}
+                    onChange={(e) => handleFilterChange('startDate', e.target.value)}
+                  />
+                </Form.Group>
+              </Col>
+              <Col md={4}>
+                <Form.Group className="mb-2">
+                  <Form.Label>End Date</Form.Label>
+                  <Form.Control
+                    type="date"
+                    value={filters.endDate}
+                    onChange={(e) => handleFilterChange('endDate', e.target.value)}
+                  />
+                </Form.Group>
+              </Col>
             </Row>
           </Card.Body>
         )}
 
         <Card.Body className="p-0">
-          <Table responsive hover className="mb-0" size="sm">
+          <Table responsive hover className="record-table mb-0" size="sm">
             <thead>
               <tr>
+                <th className="record-check-head">
+                  <Form.Check
+                    type="checkbox"
+                    checked={filteredRecords.length > 0 && selectedIds.length === filteredRecords.length}
+                    onChange={handleSelectAll}
+                  />
+                </th>
                 <th>#</th>
                 <th>Purok</th>
                 <th>Household Name</th>
@@ -504,7 +584,7 @@ const CREntry = () => {
             <tbody>
               {currentRecords.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="text-center py-3 text-muted">
+                  <td colSpan="7" className="text-center py-3 text-muted">
                     {searchTerm || Object.values(filters).some(v => v) 
                       ? 'No records found matching your filters' 
                       : 'No records found'}
@@ -512,7 +592,14 @@ const CREntry = () => {
                 </tr>
               ) : (
                 currentRecords.map((record, index) => (
-                  <tr key={record.id}>
+                  <tr key={record.id} onClick={() => handleSelectRecord(record.id)} style={{ cursor: 'pointer' }} className={selectedIds.includes(record.id) ? 'record-selected' : ''}>
+                    <td className="record-check-cell">
+                      <Form.Check
+                        type="checkbox"
+                        checked={selectedIds.includes(record.id)}
+                        onChange={(e) => { e.stopPropagation(); handleSelectRecord(record.id) }}
+                      />
+                    </td>
                     <td>{indexOfFirstRecord + index + 1}</td>
                     <td>Purok {record.purok}</td>
                     <td>{record.householdName}</td>
@@ -523,10 +610,12 @@ const CREntry = () => {
                     </td>
                     <td>{record.recordedDate ? new Date(record.recordedDate).toLocaleDateString() : 'N/A'}</td>
                     <td>
-                      <Button variant="outline-primary" size="sm" onClick={() => handleEdit(record)}>
+                      <Button variant="outline-primary" size="sm" className="action-btn action-edit" onClick={(e) => { e.stopPropagation(); handleEdit(record) }}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                         Edit
                       </Button>
-                      <Button variant="outline-danger" size="sm" className="ms-1" onClick={() => handleDelete(record.id)}>
+                      <Button variant="outline-danger" size="sm" className="action-btn action-delete ms-1" onClick={(e) => { e.stopPropagation(); handleDelete(record.id) }}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                         Delete
                       </Button>
                     </td>

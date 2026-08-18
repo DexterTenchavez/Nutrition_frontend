@@ -24,6 +24,10 @@ export const childRecordApi = {
     const response = await api.delete(`/childrecords/${id}`)
     return response.data
   },
+  deleteMany: async (ids) => {
+    const response = await api.post('/childrecords/batch-delete', ids)
+    return response.data
+  },
 }
 
 export const reportApi = {

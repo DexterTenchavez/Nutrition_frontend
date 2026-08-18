@@ -105,7 +105,6 @@ const Login = () => {
             )}
           </div>
 
-          <h2 className="login-title">Welcome back</h2>
           <p className="login-subtitle">Nutrition Management Portal</p>
 
           {error && (
@@ -136,7 +135,7 @@ const Login = () => {
                 value={formData.username}
                 onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                 required
-                placeholder="name@example.com"
+                placeholder="Enter your username or email"
                 disabled={!!retryAfter}
               />
             </Form.Group>

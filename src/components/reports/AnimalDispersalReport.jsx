@@ -71,7 +71,9 @@ const AnimalDispersalReport = () => {
         cowMale: purokRecords.reduce((sum, r) => sum + (r.cowMale || 0), 0),
         cowFemale: purokRecords.reduce((sum, r) => sum + (r.cowFemale || 0), 0),
         carabaoMale: purokRecords.reduce((sum, r) => sum + (r.carabaoMale || 0), 0),
-        carabaoFemale: purokRecords.reduce((sum, r) => sum + (r.carabaoFemale || 0), 0)
+        carabaoFemale: purokRecords.reduce((sum, r) => sum + (r.carabaoFemale || 0), 0),
+        otherMale: purokRecords.reduce((sum, r) => sum + (r.otherMale || 0), 0),
+        otherFemale: purokRecords.reduce((sum, r) => sum + (r.otherFemale || 0), 0)
       })
     }
     const total = {
@@ -85,7 +87,9 @@ const AnimalDispersalReport = () => {
       cowMale: purokReports.reduce((sum, p) => sum + p.cowMale, 0),
       cowFemale: purokReports.reduce((sum, p) => sum + p.cowFemale, 0),
       carabaoMale: purokReports.reduce((sum, p) => sum + p.carabaoMale, 0),
-      carabaoFemale: purokReports.reduce((sum, p) => sum + p.carabaoFemale, 0)
+      carabaoFemale: purokReports.reduce((sum, p) => sum + p.carabaoFemale, 0),
+      otherMale: purokReports.reduce((sum, p) => sum + p.otherMale, 0),
+      otherFemale: purokReports.reduce((sum, p) => sum + p.otherFemale, 0)
     }
     const startYear = new Date(startDate).getFullYear()
     const endYear = new Date(endDate).getFullYear()
@@ -106,6 +110,7 @@ const AnimalDispersalReport = () => {
       p.goatMale || 0, p.goatFemale || 0,
       p.cowMale || 0, p.cowFemale || 0,
       p.carabaoMale || 0, p.carabaoFemale || 0,
+      p.otherMale || 0, p.otherFemale || 0,
       ''
     ])
 
@@ -117,6 +122,7 @@ const AnimalDispersalReport = () => {
       report.total.goatMale || 0, report.total.goatFemale || 0,
       report.total.cowMale || 0, report.total.cowFemale || 0,
       report.total.carabaoMale || 0, report.total.carabaoFemale || 0,
+      report.total.otherMale || 0, report.total.otherFemale || 0,
       ''
     ])
 
@@ -130,7 +136,7 @@ const AnimalDispersalReport = () => {
         `BARANGAY: ${barangayName}`,
         `DATE: ${new Date(report.startDate).toLocaleDateString()} - ${new Date(report.endDate).toLocaleDateString()}`
       ],
-      headers: ['PUROK', 'Households Received', 'Chicken M', 'Chicken F', 'Pig M', 'Pig F', 'Goat M', 'Goat F', 'Cow M', 'Cow F', 'Carabao M', 'Carabao F', 'Signature'],
+      headers: ['PUROK', 'Households Received', 'Chicken M', 'Chicken F', 'Pig M', 'Pig F', 'Goat M', 'Goat F', 'Cow M', 'Cow F', 'Carabao M', 'Carabao F', 'Other M', 'Other F', 'Signature'],
       body,
       cellFontSize: 14,
       signatures: {
@@ -242,9 +248,11 @@ const AnimalDispersalReport = () => {
                   <th colSpan="2">Goat</th>
                   <th colSpan="2">Cow</th>
                   <th colSpan="2">Carabao</th>
+                  <th colSpan="2">Other</th>
                   <th rowSpan="2">Signature</th>
                 </tr>
                 <tr className="text-center">
+                  <th>M</th><th>F</th>
                   <th>M</th><th>F</th>
                   <th>M</th><th>F</th>
                   <th>M</th><th>F</th>
@@ -267,6 +275,8 @@ const AnimalDispersalReport = () => {
                     <td>{p.cowFemale || 0}</td>
                     <td>{p.carabaoMale || 0}</td>
                     <td>{p.carabaoFemale || 0}</td>
+                    <td>{p.otherMale || 0}</td>
+                    <td>{p.otherFemale || 0}</td>
                     <td></td>
                   </tr>
                 ))}
@@ -283,6 +293,8 @@ const AnimalDispersalReport = () => {
                   <td>{report.total.cowFemale || 0}</td>
                   <td>{report.total.carabaoMale || 0}</td>
                   <td>{report.total.carabaoFemale || 0}</td>
+                  <td>{report.total.otherMale || 0}</td>
+                  <td>{report.total.otherFemale || 0}</td>
                   <td></td>
                 </tr>
               </tbody>

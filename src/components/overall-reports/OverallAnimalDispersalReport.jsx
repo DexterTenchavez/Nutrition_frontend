@@ -53,6 +53,8 @@ const OverallAnimalDispersalReport = () => {
           goatFemale: barangayRecords.reduce((sum, r) => sum + (r.goatFemale || 0), 0),
           cowMale: barangayRecords.reduce((sum, r) => sum + (r.cowMale || 0), 0),
           cowFemale: barangayRecords.reduce((sum, r) => sum + (r.cowFemale || 0), 0),
+          otherMale: barangayRecords.reduce((sum, r) => sum + (r.otherMale || 0), 0),
+          otherFemale: barangayRecords.reduce((sum, r) => sum + (r.otherFemale || 0), 0),
         }
       })
       
@@ -65,6 +67,8 @@ const OverallAnimalDispersalReport = () => {
         goatFemale: barangayReports.reduce((sum, b) => sum + b.goatFemale, 0),
         cowMale: barangayReports.reduce((sum, b) => sum + b.cowMale, 0),
         cowFemale: barangayReports.reduce((sum, b) => sum + b.cowFemale, 0),
+        otherMale: barangayReports.reduce((sum, b) => sum + b.otherMale, 0),
+        otherFemale: barangayReports.reduce((sum, b) => sum + b.otherFemale, 0),
         totalBarangays: barangayReports.length
       }
       
@@ -113,6 +117,8 @@ const OverallAnimalDispersalReport = () => {
       b.goatFemale || 0,
       b.cowMale || 0,
       b.cowFemale || 0,
+      b.otherMale || 0,
+      b.otherFemale || 0,
     ])
 
     body.push([
@@ -125,6 +131,8 @@ const OverallAnimalDispersalReport = () => {
       report.overallTotal?.goatFemale || 0,
       report.overallTotal?.cowMale || 0,
       report.overallTotal?.cowFemale || 0,
+      report.overallTotal?.otherMale || 0,
+      report.overallTotal?.otherFemale || 0,
     ])
 
     await exportReportToDocx({
@@ -137,7 +145,7 @@ const OverallAnimalDispersalReport = () => {
       titleLines: [`ANIMAL DISPERSAL OVERALL REPORT ${yearDisplay}`],
       infoLines,
       infoCenter: true,
-      headers: ['#', 'BARANGAY', 'CHK M', 'CHK F', 'PIG M', 'PIG F', 'GOAT M', 'GOAT F', 'COW M', 'COW F'],
+      headers: ['#', 'BARANGAY', 'CHK M', 'CHK F', 'PIG M', 'PIG F', 'GOAT M', 'GOAT F', 'COW M', 'COW F', 'OTH M', 'OTH F'],
       body,
       cellFontSize: 16,
       signatures: {
@@ -262,6 +270,8 @@ const OverallAnimalDispersalReport = () => {
                 <th>GOAT F</th>
                 <th>COW M</th>
                 <th>COW F</th>
+                <th>OTH M</th>
+                <th>OTH F</th>
               </tr>
             </thead>
             <tbody>
@@ -277,6 +287,8 @@ const OverallAnimalDispersalReport = () => {
                   <td className="text-center">{barangay.goatFemale || 0}</td>
                   <td className="text-center">{barangay.cowMale || 0}</td>
                   <td className="text-center">{barangay.cowFemale || 0}</td>
+                  <td className="text-center">{barangay.otherMale || 0}</td>
+                  <td className="text-center">{barangay.otherFemale || 0}</td>
                 </tr>
               ))}
               <tr className="table-primary fw-bold">
@@ -289,6 +301,8 @@ const OverallAnimalDispersalReport = () => {
                 <td className="text-center">{report.overallTotal?.goatFemale || 0}</td>
                 <td className="text-center">{report.overallTotal?.cowMale || 0}</td>
                 <td className="text-center">{report.overallTotal?.cowFemale || 0}</td>
+                <td className="text-center">{report.overallTotal?.otherMale || 0}</td>
+                <td className="text-center">{report.overallTotal?.otherFemale || 0}</td>
               </tr>
             </tbody>
           </Table>
