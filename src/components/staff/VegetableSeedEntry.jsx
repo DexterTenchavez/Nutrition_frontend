@@ -2,12 +2,13 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { vegetableSeedApi } from '../../api/reports'
-import { BARANGAYS } from '../../utils/constants'
+import { BARANGAYS, VEGETABLE_SEEDS, BENEFICIARY_TYPES } from '../../utils/constants'
 import { useStaffDataEntry } from './StaffDataEntryContext'
 import DataEntryDropdown from './DataEntryDropdown'
 import NameSuggestionField from './NameSuggestionField'
-import './recordTable.css'
+import './css/recordTable.css'
 import LoadingOverlay from '../common/LoadingOverlay'
+import NotificationModal from '../common/NotificationModal'
 import { Card, Form, Button, Alert, Table, Row, Col, Pagination } from 'react-bootstrap'
 import { FaSearch, FaTimes, FaFilter } from 'react-icons/fa'
 
@@ -19,7 +20,9 @@ const VegetableSeedEntry = () => {
     barangay: user?.barangay || '',
     purok: purok,
     householdName: name,
-    seedTypes: [{ type: '', count: 0 }],
+    seedTypes: [{ type: '', count: 0, isOther: false }],
+    beneficiaries: '',
+    beneficiaryIsOther: false,
     recordedDate: recordDate,
     recordedBy: user?.username || ''
   })
@@ -27,7 +30,7 @@ const VegetableSeedEntry = () => {
   const [filteredRecords, setFilteredRecords] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
+  const [notification, setNotification] = useState(null)
   const [editingId, setEditingId] = useState(null)
   const [deleting, setDeleting] = useState(false)
   const [busyMessage, setBusyMessage] = useState('')
@@ -115,7 +118,7 @@ const VegetableSeedEntry = () => {
   const addSeedType = () => {
     setFormData({
       ...formData,
-      seedTypes: [...formData.seedTypes, { type: '', count: 0 }]
+      seedTypes: [...formData.seedTypes, { type: '', count: 0, isOther: false }]
     })
   }
 
@@ -130,10 +133,31 @@ const VegetableSeedEntry = () => {
     const updated = [...formData.seedTypes]
     if (field === 'count') {
       updated[index].count = parseInt(value) || 0
-    } else {
+    } else if (field === 'type') {
+      if (value === '__other__') {
+        updated[index].type = ''
+        updated[index].isOther = true
+      } else {
+        updated[index].type = value
+        updated[index].isOther = false
+      }
+    } else if (field === 'customType') {
       updated[index].type = value
+      updated[index].isOther = true
     }
     setFormData({ ...formData, seedTypes: updated })
+  }
+
+  const updateBeneficiary = (field, value) => {
+    if (field === 'type') {
+      if (value === '__other__') {
+        setFormData({ ...formData, beneficiaries: '', beneficiaryIsOther: true })
+      } else {
+        setFormData({ ...formData, beneficiaries: value, beneficiaryIsOther: false })
+      }
+    } else if (field === 'customType') {
+      setFormData({ ...formData, beneficiaries: value, beneficiaryIsOther: true })
+    }
   }
 
   const indexOfLastRecord = currentPage * recordsPerPage
@@ -165,13 +189,15 @@ const VegetableSeedEntry = () => {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
-    setSuccess('')
+    setNotification(null)
     setLoading(true)
     setBusyMessage(editingId ? 'Updating...' : 'Saving...')
 
     try {
       // Filter out empty seed types
-      const filledSeedTypes = formData.seedTypes.filter(st => st.type.trim() !== '')
+      const filledSeedTypes = formData.seedTypes
+        .filter(st => st.type.trim() !== '')
+        .map(st => ({ type: st.type.trim(), count: st.count }))
       const seedTypesJson = JSON.stringify(filledSeedTypes)
 
       const year = new Date(formData.recordedDate).getFullYear()
@@ -181,6 +207,7 @@ const VegetableSeedEntry = () => {
         purok: parseInt(formData.purok),
         householdName: formData.householdName,
         seedTypes: seedTypesJson,
+        beneficiaries: formData.beneficiaries.trim(),
         year: year,
         recordedDate: formData.recordedDate, // ✅ Use formData.recordedDate
         recordedBy: formData.recordedBy || user?.username || ''
@@ -190,17 +217,19 @@ const VegetableSeedEntry = () => {
 
       if (editingId) {
         await vegetableSeedApi.update(editingId, data)
-        setSuccess('Record updated successfully!')
+        setNotification({ variant: 'success', title: 'Updated!', message: 'Record updated successfully!' })
       } else {
         await vegetableSeedApi.create(data)
-        setSuccess('Record saved successfully!')
+        setNotification({ variant: 'success', title: 'Saved!', message: 'Record saved successfully!' })
       }
 
       setFormData({
         barangay: user?.barangay || '',
         purok: purok,
         householdName: name,
-        seedTypes: [{ type: '', count: 0 }],
+        seedTypes: [{ type: '', count: 0, isOther: false }],
+        beneficiaries: '',
+        beneficiaryIsOther: false,
         recordedDate: new Date().toISOString().split('T')[0],
         recordedBy: user?.username || ''
       })
@@ -209,7 +238,7 @@ const VegetableSeedEntry = () => {
     } catch (error) {
       console.error('Error:', error.response?.data)
       const errorMsg = error.response?.data?.message || error.message || 'Error saving record'
-      setError(errorMsg)
+      setNotification({ variant: 'danger', title: 'Error!', message: errorMsg })
     } finally {
       setLoading(false)
       setBusyMessage('')
@@ -224,7 +253,11 @@ const VegetableSeedEntry = () => {
       try {
         const parsed = typeof record.seedTypes === 'string' ? JSON.parse(record.seedTypes) : record.seedTypes
         if (parsed && parsed.length > 0) {
-          seedTypes = parsed
+          seedTypes = parsed.map(s => ({
+            type: s.type || '',
+            count: s.count || 0,
+            isOther: s.type ? !VEGETABLE_SEEDS.includes(s.type) : false
+          }))
         }
       } catch (e) {
         seedTypes = [{ type: '', count: 0 }]
@@ -236,6 +269,8 @@ const VegetableSeedEntry = () => {
       purok: record.purok,
       householdName: record.householdName || '',
       seedTypes: seedTypes,
+      beneficiaries: record.beneficiaries || '',
+      beneficiaryIsOther: record.beneficiaries ? !BENEFICIARY_TYPES.includes(record.beneficiaries) : false,
       recordedDate: formattedDate,
       recordedBy: record.recordedBy || user?.username || ''
     })
@@ -251,10 +286,10 @@ const VegetableSeedEntry = () => {
     setDeleting(true)
     try {
       await vegetableSeedApi.delete(id)
-      setSuccess('Record deleted successfully!')
+      setNotification({ variant: 'success', title: 'Deleted!', message: 'Record deleted successfully!' })
       setTimeout(() => refreshData(), 300)
     } catch (error) {
-      alert('Error deleting record')
+      setNotification({ variant: 'danger', title: 'Error!', message: 'Error deleting record' })
     } finally {
       setDeleting(false)
     }
@@ -278,10 +313,10 @@ const VegetableSeedEntry = () => {
     try {
       await vegetableSeedApi.deleteMany(selectedIds)
       setSelectedIds([])
-      setSuccess('Records deleted successfully!')
+      setNotification({ variant: 'success', title: 'Deleted!', message: 'Selected records deleted successfully!' })
       setTimeout(() => refreshData(), 300)
     } catch (error) {
-      alert('Error deleting records')
+      setNotification({ variant: 'danger', title: 'Error!', message: 'Error deleting records' })
     } finally {
       setBatchDeleting(false)
     }
@@ -372,6 +407,13 @@ const VegetableSeedEntry = () => {
     ) : <span className="text-muted">No seeds</span>
   }
 
+  const renderBeneficiaries = (record) => {
+    const beneficiaries = record.beneficiaries || ''
+    return beneficiaries ? (
+      <span className="badge bg-success">{beneficiaries}</span>
+    ) : <span className="text-muted">None</span>
+  }
+
   return (
     <div>
       <LoadingOverlay show={loading || deleting} message={deleting ? 'Deleting...' : busyMessage} />
@@ -404,7 +446,6 @@ const VegetableSeedEntry = () => {
         </Card.Header>
         <Card.Body>
           {error && <Alert variant="danger">{error}</Alert>}
-          {success && <Alert variant="success">{success}</Alert>}
 
           <Form onSubmit={handleSubmit}>
             <Row>
@@ -459,23 +500,64 @@ const VegetableSeedEntry = () => {
               </Col>
             </Row>
 
+            <Row>
+              <Col md={4}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Beneficiaries</Form.Label>
+                  <Form.Select
+                    value={formData.beneficiaryIsOther ? '__other__' : (formData.beneficiaries || '')}
+                    onChange={(e) => updateBeneficiary('type', e.target.value)}
+                    required
+                  >
+                    <option value="">Select Beneficiary</option>
+                    {BENEFICIARY_TYPES.map((b) => (
+                      <option key={b} value={b}>{b}</option>
+                    ))}
+                    <option value="__other__">Others</option>
+                  </Form.Select>
+                  {formData.beneficiaryIsOther && (
+                    <Form.Control
+                      type="text"
+                      className="mt-2"
+                      value={formData.beneficiaries}
+                      onChange={(e) => updateBeneficiary('customType', e.target.value)}
+                      placeholder="Enter other beneficiary"
+                    />
+                  )}
+                </Form.Group>
+              </Col>
+            </Row>
+
             <h6 className="mt-3 mb-3">Seedlings Given</h6>
             {formData.seedTypes.map((seed, index) => (
               <Row key={index} className="mb-2 align-items-end">
                 <Col md={4}>
                   <Form.Group>
                     <Form.Label>Seed Type {index + 1}</Form.Label>
-                    <Form.Control
-                      type="text"
-                      value={seed.type}
+                    <Form.Select
+                      value={seed.isOther ? '__other__' : (seed.type || '')}
                       onChange={(e) => updateSeedType(index, 'type', e.target.value)}
-                      placeholder="e.g., Eggplant, Tomato, Pechay"
-                    />
+                    >
+                      <option value="">Select seed type</option>
+                      {VEGETABLE_SEEDS.map((s) => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                      <option value="__other__">Others</option>
+                    </Form.Select>
+                    {seed.isOther && (
+                      <Form.Control
+                        type="text"
+                        className="mt-2"
+                        value={seed.type}
+                        onChange={(e) => updateSeedType(index, 'customType', e.target.value)}
+                        placeholder="Enter other seed type"
+                      />
+                    )}
                   </Form.Group>
                 </Col>
                 <Col md={3}>
                   <Form.Group>
-                    <Form.Label>Count</Form.Label>
+                    <Form.Label>Count (per Packs)</Form.Label>
                     <Form.Control
                       type="number"
                       min="0"
@@ -522,7 +604,9 @@ const VegetableSeedEntry = () => {
                   barangay: user?.barangay || '',
                   purok: purok,
                   householdName: name,
-                  seedTypes: [{ type: '', count: 0 }],
+                  seedTypes: [{ type: '', count: 0, isOther: false }],
+                  beneficiaries: '',
+                  beneficiaryIsOther: false,
                   recordedDate: new Date().toISOString().split('T')[0],
                   recordedBy: user?.username || ''
                 })
@@ -647,6 +731,7 @@ const VegetableSeedEntry = () => {
                 <th>#</th>
                 <th>Purok</th>
                 <th>Household Name</th>
+                <th>Beneficiaries</th>
                 <th>Seeds Given</th>
                 <th>Recorded Date</th>
                 <th>Actions</th>
@@ -674,6 +759,7 @@ const VegetableSeedEntry = () => {
                     <td>{indexOfFirstRecord + index + 1}</td>
                     <td>Purok {record.purok}</td>
                     <td>{record.householdName}</td>
+                    <td>{renderBeneficiaries(record)}</td>
                     <td>{renderSeedTypes(record)}</td>
                     <td>{record.recordedDate ? new Date(record.recordedDate).toLocaleDateString() : 'N/A'}</td>
                     <td>
@@ -729,6 +815,14 @@ const VegetableSeedEntry = () => {
           </Card.Footer>
         )}
       </Card>
+
+      <NotificationModal
+        show={!!notification}
+        variant={notification?.variant || 'success'}
+        title={notification?.title || ''}
+        message={notification?.message || ''}
+        onClose={() => setNotification(null)}
+      />
     </div>
   )
 }

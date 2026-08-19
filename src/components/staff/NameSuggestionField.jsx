@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Form } from 'react-bootstrap'
-import './NameSuggestionField.css'
+import './css/NameSuggestionField.css'
 
 const NameSuggestionField = ({ label, value, onChange, placeholder = '', suggestions = [], required = false }) => {
   const [open, setOpen] = useState(false)

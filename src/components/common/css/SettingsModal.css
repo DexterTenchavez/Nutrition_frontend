@@ -24,6 +24,72 @@
   padding: 0.25rem 1.5rem 1rem;
 }
 
+.settings-layout {
+  display: flex;
+  gap: 1.5rem;
+  min-height: 320px;
+  max-height: 60vh;
+  padding-top: 0.75rem;
+}
+
+.settings-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 180px;
+  border-right: 1px solid var(--app-border, #e9edf2);
+  padding-right: 1rem;
+  overflow-y: auto;
+}
+
+.settings-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: none;
+  background: transparent;
+  color: var(--app-text-muted, #7a8698);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.settings-nav-item i {
+  font-size: 16px;
+  width: 18px;
+  text-align: center;
+}
+
+.settings-nav-item:hover {
+  background: var(--app-surface-2, #f1f3f5);
+  color: var(--app-text, #17312c);
+}
+
+.settings-nav-item.active {
+  background: var(--accent-soft, rgba(46, 139, 111, 0.14));
+  color: var(--accent, #2E8B6F);
+}
+
+.settings-nav-logout {
+  margin-top: auto;
+  color: #d14343 !important;
+}
+
+.settings-nav-logout:hover {
+  background: rgba(209, 67, 67, 0.1) !important;
+  color: #d14343 !important;
+}
+
+.settings-content {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+}
+
 .settings-modal .modal-footer {
   border-top: 1px solid var(--app-border, #e9edf2);
   padding: 0.9rem 1.5rem;
@@ -259,4 +325,43 @@
 .settings-section .btn-outline-danger {
   border-radius: 8px;
   font-weight: 600;
+}
+
+.password-eye-toggle {
+  border-radius: 0 8px 8px 0;
+  border-color: var(--app-border-strong, #ced6d2);
+  color: var(--app-text-muted, #7a8698);
+}
+
+.password-eye-toggle i {
+  font-size: 15px;
+}
+
+.input-group .form-control {
+  border-radius: 8px 0 0 8px;
+}
+
+.input-group .password-eye-toggle {
+  border-radius: 0 8px 8px 0;
+}
+
+/* ===== Username block ===== */
+.username-block {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--app-border, #e9edf2);
+}
+
+.username-locked {
+  margin-top: 10px;
+  padding: 12px 14px;
+  background: var(--app-surface-2, #f8faf9);
+  border: 1px solid var(--app-border, #e9edf2);
+  border-radius: 10px;
+  font-size: 13px;
+  color: var(--app-text-muted, #7a8698);
+}
+
+.username-locked strong {
+  color: var(--app-text, #17312c);
 }

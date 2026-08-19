@@ -9,3 +9,12 @@ export const BARANGAYS = [
   "Sentinela", "Sinandigan", "Tapal", "Tapon", "Tintinan",
   "Tipolo", "Tubog", "Tuboran", "Union", "Villa Teresita"
 ]
+
+export const VEGETABLE_SEEDS = [
+  "Ampalaya", "Eggplant", "Gabi", "Kangkong", "Okra", "Patola",
+  "Pechay", "Sili", "Sitaw", "Squash", "Tomato", "Upo"
+]
+
+export const BENEFICIARY_TYPES = [
+  "Malnourished", "Pregnant", "Lactating", "Senior Citizen"
+]

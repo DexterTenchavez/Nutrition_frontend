@@ -230,15 +230,8 @@
   margin-bottom: 1.25rem;
 }
 
-.forgot-link {
-  font-size: 12px;
-  color: #3E9B7E;
-  font-weight: 500;
-  text-decoration: none;
-}
-
 .login-submit-btn {
-  background: #3E9B7E;
+  background: #0fb44c;
   border: none;
   border-radius: 8px;
   padding: 0.65rem;
@@ -249,11 +242,11 @@
 }
 
 .login-submit-btn:hover:not(:disabled) {
-  background: #2E7D64;
+  background: #22c591;
 }
 
 .login-submit-btn:disabled {
-  background: #B9DCCB;
+  background: #648f7a;
   color: #ffffff;
   opacity: 0.6;
 }

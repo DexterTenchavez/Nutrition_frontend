@@ -318,9 +318,16 @@ const AllRecords = () => {
           )
         case 'Vegetable Seeds':
           return (
-            <span className="text-muted" style={{ fontSize: '0.8rem' }}>
-              {formatSeedTypes(record.seedTypes)}
-            </span>
+            <div className="d-flex flex-column gap-1">
+              <span className="text-muted" style={{ fontSize: '0.8rem' }}>
+                {formatSeedTypes(record.seedTypes)}
+              </span>
+              {record.beneficiaries && (
+                <span className="badge bg-success" style={{ width: 'fit-content' }}>
+                  {record.beneficiaries}
+                </span>
+              )}
+            </div>
           )
         default:
           return <span className="text-muted">-</span>
@@ -384,7 +391,7 @@ const AllRecords = () => {
       if (record._type === 'Iodized Salt') {
         details = getIodizedSaltDetails(record)
       } else if (record._type === 'Vegetable Seeds') {
-        details = formatSeedTypes(record.seedTypes)
+        details = record.beneficiaries ? `${record.beneficiaries} | ${formatSeedTypes(record.seedTypes)}` : formatSeedTypes(record.seedTypes)
       } else {
         details = '...'
       }

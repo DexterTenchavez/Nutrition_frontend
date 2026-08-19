@@ -190,10 +190,6 @@ const Login = () => {
               </div>
             </Form.Group>
 
-            <div className="login-form-meta">
-              <a href="#forgot" className="forgot-link">Forgot password?</a>
-            </div>
-
             <Button
               type="submit"
               className="w-100 login-submit-btn"
