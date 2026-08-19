@@ -1,5 +1,26 @@
 /* ===== Record table redesign ===== */
 
+/* Checkbox column:
+   - Laptop/desktop (pointer: fine): always visible
+   - Phones (pointer: coarse): hidden by default, only shown in
+     selection mode (reached by long-pressing a row) */
+.record-table .record-check-head,
+.record-table .record-check-cell {
+  display: table-cell;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .record-table .record-check-head,
+  .record-table .record-check-cell {
+    display: none;
+  }
+
+  .record-select-mode .record-table .record-check-head,
+  .record-select-mode .record-table .record-check-cell {
+    display: table-cell;
+  }
+}
+
 .record-table {
   border-collapse: separate;
   border-spacing: 0;
@@ -32,6 +53,14 @@
   border-top: 1px solid #edf0f3;
   font-size: 0.85rem;
   color: #2d3748;
+}
+
+.record-table tbody tr {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .record-table tbody tr:nth-child(even) {

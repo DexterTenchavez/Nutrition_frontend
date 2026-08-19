@@ -9,6 +9,33 @@
 }
 
 /* =====================================================
+   Phone selection mode (reached by long-pressing a row)
+   ===================================================== */
+.staff-select-done {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  z-index: 1600;
+  display: inline-flex;
+  align-items: center;
+  border: none;
+  border-radius: 999px;
+  padding: 11px 26px;
+  font-size: 14px;
+  font-weight: 700;
+  background: var(--accent, #2E8B6F);
+  color: var(--accent-contrast, #ffffff);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.staff-select-done:hover {
+  background: var(--accent-hover, #1F6A53);
+}
+
+/* =====================================================
    Mobile / phone responsiveness for data entry pages
    ===================================================== */
 @media (max-width: 767.98px) {

@@ -63,26 +63,43 @@ const Login = () => {
         <div className="login-brand-panel">
           <div className="login-brand-header">
             <div className="login-brand-badge">
-              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="12" cy="12" r="10" fill="#F0997B"/>
-              </svg>
+              <i className="bi bi-heart-pulse"></i>
             </div>
             <span>National Nutrition Council</span>
           </div>
 
           <div className="login-brand-body">
             <h1>Nutrition data, organized for every barangay.</h1>
-            <p>Track reports, manage staff access, and generate PDF summaries from one portal.</p>
+            <p>Track Consolidatedreports, manage staff access, and generate Documents</p>
           </div>
 
-          <div className="login-brand-stats">
-            <div>
-              <div className="stat-value">8</div>
-              <div className="stat-label">Report modules</div>
+          <div className="login-brand-features">
+            <div className="login-feature-card">
+              <div className="login-feature-icon">
+                <i className="bi bi-bar-chart-line-fill"></i>
+              </div>
+              <div className="login-feature-meta">
+                <div className="login-feature-value">8</div>
+                <div className="login-feature-label">Report modules</div>
+              </div>
             </div>
-            <div>
-              <div className="stat-value">100%</div>
-              <div className="stat-label">Role-based access</div>
+            <div className="login-feature-card">
+              <div className="login-feature-icon">
+                <i className="bi bi-shield-lock-fill"></i>
+              </div>
+              <div className="login-feature-meta">
+                <div className="login-feature-value">100%</div>
+                <div className="login-feature-label">Role-based access</div>
+              </div>
+            </div>
+            <div className="login-feature-card">
+              <div className="login-feature-icon">
+                <i className="bi bi-file-earmark-pdf-fill"></i>
+              </div>
+              <div className="login-feature-meta">
+                <div className="login-feature-value">PDF</div>
+                <div className="login-feature-label">One-click summaries</div>
+              </div>
             </div>
           </div>
         </div>
@@ -98,7 +115,7 @@ const Login = () => {
             ) : (
               <div className="login-logo-fallback">
                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 2C12 2 6 8.5 6 13.5C6 17.09 8.69 20 12 20C15.31 20 18 17.09 18 13.5C18 8.5 12 2 12 2Z" fill="#0F6E56"/>
+                  <path d="M12 2C12 2 6 8.5 6 13.5C6 17.09 8.69 20 12 20C15.31 20 18 17.09 18 13.5C18 8.5 12 2 12 2Z" fill="#3E9B7E"/>
                   <path d="M12 20C12 20 12 16 12 13" stroke="#E1F5EE" strokeWidth="1.4" strokeLinecap="round"/>
                 </svg>
               </div>

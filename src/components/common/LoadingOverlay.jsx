@@ -1,5 +1,5 @@
 import nutritionLogo from '../../assets/nutritionlogo.jpg'
-import './LoadingOverlay.css'
+import './css/LoadingOverlay.css'
 
 const LoadingOverlay = ({ show, message = 'Please wait...' }) => {
   if (!show) return null

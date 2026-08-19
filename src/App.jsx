@@ -65,7 +65,7 @@ function App() {
         user ? <Navigate to="/dashboard" /> : <Login />
       } />
       <Route path="/*" element={
-        <div className="min-vh-100 bg-light">
+        <div className="app-shell">
           <Navbar />
           <main>
             <Routes>

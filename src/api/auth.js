@@ -5,6 +5,10 @@ export const authApi = {
     const response = await api.post('/auth/login', credentials)
     return response.data
   },
+  changePassword: async (data) => {
+    const response = await api.post('/auth/change-password', data)
+    return response.data
+  },
 }
 
 export const childRecordApi = {

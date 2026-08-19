@@ -1,18 +1,18 @@
+import { useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { Navbar as BsNavbar, Nav, Container, Button } from 'react-bootstrap'
 import nutritionLogo from '../../assets/nutritionlogo.jpg'
-import './Navbar.css'
+import SettingsModal from './SettingsModal'
+import './css/Navbar.css'
 
 const Navbar = () => {
   const { user, logout, isAdmin } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  const [showSettings, setShowSettings] = useState(false)
 
-  const handleLogout = () => {
-    logout()
-    navigate('/login')
-  }
+
 
   if (!user) return null
 
@@ -65,12 +65,20 @@ const Navbar = () => {
               {user.role}
             </span>
             <span className="username-text">{user.username}</span>
-            <Button variant="outline-light" size="sm" className="logout-btn" onClick={handleLogout}>
-              Logout
+            <Button
+              variant="outline-light"
+              size="sm"
+              className="settings-btn"
+              onClick={() => setShowSettings(true)}
+              aria-label="Open settings"
+            >
+              <i className="bi bi-gear-fill"></i>
             </Button>
+            
           </div>
         </BsNavbar.Collapse>
       </Container>
+      <SettingsModal show={showSettings} onClose={() => setShowSettings(false)} />
     </BsNavbar>
   )
 }
