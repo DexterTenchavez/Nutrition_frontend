@@ -1113,6 +1113,7 @@ const ChildRecordsEntry = () => {
                 <th>Purok</th>
                 <th>Mother/Caregiver</th>
                 <th>Name</th>
+                <th>Birthdate</th>
                 <th>Sex</th>
                 <th>Age (mos)</th>
                 <th>Weight</th>
@@ -1127,7 +1128,7 @@ const ChildRecordsEntry = () => {
             <tbody>
               {currentRecords.length === 0 ? (
                 <tr>
-                  <td colSpan="14" className="text-center py-3 text-muted">
+                  <td colSpan="15" className="text-center py-3 text-muted">
                     {searchTerm || Object.values(filters).some(v => v) 
                       ? 'No records found matching your filters' 
                       : 'No records found'}
@@ -1151,6 +1152,7 @@ const ChildRecordsEntry = () => {
                       <td>Purok {record.purok}</td>
                       <td>{record.motherOrCaregiver || '—'}</td>
                       <td>{record.fullName}</td>
+                      <td>{record.birthdate ? new Date(record.birthdate).toLocaleDateString() : 'N/A'}</td>
                       <td>{record.sex === 'Male' ? 'M' : record.sex === 'Female' ? 'F' : '—'}</td>
                       <td>{record.ageMonths}</td>
                       <td>{record.weight} kg</td>
