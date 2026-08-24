@@ -1,8 +1,8 @@
-
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { childRecordApi } from '../../api/auth'
 import { BARANGAYS } from '../../utils/constants'
+import { getWeightForAgeZScore, classifyWeightForAge } from '../../utils/whoWeightForAge'
 import { useStaffDataEntry } from './StaffDataEntryContext'
 import DataEntryDropdown from './DataEntryDropdown'
 import NameSuggestionField from './NameSuggestionField'
@@ -22,6 +22,7 @@ const ChildRecordsEntry = () => {
     purok: purok,
     targetCategory: 'Child (0–59 months)',
     fullName: name,
+    sex: '',
     birthdate: '',
     ageMonths: '',
     weight: '',
@@ -155,7 +156,6 @@ const ChildRecordsEntry = () => {
     setCurrentPage(1)
   }
 
-  // Calculate age in months from birthdate to recorded date
   const calculateAge = (birthdate, recordedDate) => {
     if (!birthdate || !recordedDate) return ''
     const birth = new Date(birthdate)
@@ -173,7 +173,6 @@ const ChildRecordsEntry = () => {
     
     const totalMonths = (years * 12) + months
     
-    // Handle day adjustment
     const birthDay = birth.getDate()
     const recordedDay = recorded.getDate()
     if (recordedDay < birthDay) {
@@ -183,7 +182,17 @@ const ChildRecordsEntry = () => {
     return totalMonths
   }
 
-  // Auto-calculate age when birthdate or recorded date changes
+  // DHS/WHO weight-for-age Z-score classification:
+  //   Normal:                 z-score >= -2.0
+  //   Moderately Underweight: -3.0 <= z-score < -2.0
+  //   Severely Underweight:   z-score < -3.0
+  const updateNutritionalStatus = (weight, ageMonths, sex) => {
+    const zScore = getWeightForAgeZScore(weight, ageMonths, sex)
+    return classifyWeightForAge(zScore)
+  }
+
+  const wfaZScore = getWeightForAgeZScore(formData.weight, formData.ageMonths, formData.sex)
+
   const handleDateChange = (field, value) => {
     const updatedForm = { ...formData, [field]: value }
 
@@ -195,10 +204,29 @@ const ChildRecordsEntry = () => {
       const age = calculateAge(updatedForm.birthdate, updatedForm.recordedDate)
       if (age !== '' && age !== null && age !== undefined) {
         updatedForm.ageMonths = age.toString()
+        updatedForm.nutritionalStatus = updateNutritionalStatus(updatedForm.weight, age, updatedForm.sex)
       }
     }
     
     setFormData(updatedForm)
+  }
+
+  const handleWeightChange = (e) => {
+    const weight = e.target.value
+    setFormData(prev => {
+      const newData = { ...prev, weight }
+      newData.nutritionalStatus = updateNutritionalStatus(weight, prev.ageMonths, prev.sex)
+      return newData
+    })
+  }
+
+  const handleSexChange = (e) => {
+    const sex = e.target.value
+    setFormData(prev => {
+      const newData = { ...prev, sex }
+      newData.nutritionalStatus = updateNutritionalStatus(prev.weight, prev.ageMonths, sex)
+      return newData
+    })
   }
 
   const indexOfLastRecord = currentPage * recordsPerPage
@@ -253,6 +281,12 @@ const ChildRecordsEntry = () => {
         return
       }
 
+      if (!formData.sex) {
+        setError('Please select sex (required for Z-score calculation)')
+        setLoading(false)
+        return
+      }
+
       if (weight < 0) {
         setError('Weight cannot be negative')
         setLoading(false)
@@ -285,6 +319,7 @@ const ChildRecordsEntry = () => {
         weight: weight,
         height: height,
         recordedDate: formData.recordedDate,
+        nutritionalStatus: updateNutritionalStatus(weight, ageMonths, formData.sex)
       }
 
       if (editingId) {
@@ -300,6 +335,7 @@ const ChildRecordsEntry = () => {
         purok: purok,
         targetCategory: 'Child (0–59 months)',
         fullName: name,
+        sex: '',
         birthdate: '',
         ageMonths: '',
         weight: '',
@@ -324,6 +360,7 @@ const ChildRecordsEntry = () => {
       purok: record.purok,
       targetCategory: record.targetCategory,
       fullName: record.fullName,
+      sex: record.sex || '',
       birthdate: record.birthdate ? record.birthdate.split('T')[0] : '',
       ageMonths: record.ageMonths,
       weight: record.weight,
@@ -460,7 +497,7 @@ const ChildRecordsEntry = () => {
   return (
     <div>
       <LoadingOverlay show={loading || deleting} message={deleting ? 'Deleting...' : busyMessage} />
-      <h4 className="mb-4">Vitamin A Records</h4>
+      <h4 className="mb-4">Child Records</h4>
 
       <Row className="mb-3">
         <Col md={4}>
@@ -557,7 +594,7 @@ const ChildRecordsEntry = () => {
             <Row>
               <Col md={4}>
                 <Form.Group className="mb-3">
-                  <Form.Label>Age (Months) - Auto-calculated</Form.Label>
+                  <Form.Label>Age (Months)</Form.Label>
                   <Form.Control
                     type="text"
                     value={formData.ageMonths || 'Auto-calculated'}
@@ -574,7 +611,7 @@ const ChildRecordsEntry = () => {
                     step="0.1"
                     min="0"
                     value={formData.weight}
-                    onChange={(e) => handleNonNegativeInput(e, 'weight')}
+                    onChange={handleWeightChange}
                     required
                     placeholder="e.g., 11.5"
                     onKeyDown={(e) => {
@@ -609,17 +646,47 @@ const ChildRecordsEntry = () => {
             <Row>
               <Col md={4}>
                 <Form.Group className="mb-3">
-                  <Form.Label>Nutritional Status</Form.Label>
+                  <Form.Label>Sex</Form.Label>
                   <Form.Select
-                    value={formData.nutritionalStatus}
-                    onChange={(e) => setFormData({ ...formData, nutritionalStatus: e.target.value })}
+                    value={formData.sex}
+                    onChange={handleSexChange}
                     required
                   >
-                    <option value="">Select Status</option>
-                    <option value="Normal">Normal</option>
-                    <option value="Underweight">Underweight</option>
-                    <option value="Severely Underweight">Severely Underweight</option>
+                    <option value="">Select Sex</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
                   </Form.Select>
+                </Form.Group>
+              </Col>
+              <Col md={4}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Nutritional Status</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={formData.nutritionalStatus || 'Auto-calculated'}
+                    readOnly
+                    disabled
+                    className={
+                      formData.nutritionalStatus === 'Severely Underweight' ? 'text-danger fw-bold' :
+                      formData.nutritionalStatus === 'Moderately Underweight' ? 'text-warning fw-bold' :
+                      formData.nutritionalStatus === 'Normal' ? 'text-success fw-bold' :
+                      ''
+                    }
+                  />
+                </Form.Group>
+              </Col>
+              <Col md={4}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Weight-for-Age Z-Score</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={wfaZScore !== null ? `${wfaZScore.toFixed(2)} SD` : 'Auto-calculated'}
+                    readOnly
+                    disabled
+                  />
+                  <Form.Text className="text-muted">
+                    WHO Z-score: Normal (&ge; -2.0), Moderate (-3.0 to -2.0), Severe (&lt; -3.0)
+                  </Form.Text>
                 </Form.Group>
               </Col>
             </Row>
@@ -635,6 +702,7 @@ const ChildRecordsEntry = () => {
                   purok: purok,
                   targetCategory: 'Child (0–59 months)',
                   fullName: name,
+                  sex: '',
                   birthdate: '',
                   ageMonths: '',
                   weight: '',
@@ -724,8 +792,9 @@ const ChildRecordsEntry = () => {
                   >
                     <option value="">All</option>
                     <option value="Normal">Normal</option>
-                    <option value="Underweight">Underweight</option>
+                    <option value="Moderately Underweight">Moderately Underweight</option>
                     <option value="Severely Underweight">Severely Underweight</option>
+                    <option value="Underweight">Underweight (old records)</option>
                   </Form.Select>
                 </Form.Group>
               </Col>
@@ -887,8 +956,10 @@ const ChildRecordsEntry = () => {
                     <td>
                       <span className={`badge ${
                         record.nutritionalStatus === 'Normal' ? 'bg-success' :
+                        record.nutritionalStatus === 'Moderately Underweight' ? 'bg-warning' :
+                        record.nutritionalStatus === 'Severely Underweight' ? 'bg-danger' :
                         record.nutritionalStatus === 'Underweight' ? 'bg-warning' :
-                        'bg-danger'
+                        'bg-secondary'
                       }`}>
                         {record.nutritionalStatus}
                       </span>

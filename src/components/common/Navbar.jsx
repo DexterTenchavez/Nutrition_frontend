@@ -25,15 +25,13 @@ const Navbar = () => {
           <span className="brand-icon">
             <img src={nutritionLogo} alt="Nutrition Logo" />
           </span>
-          <span>
+          <span className="brand-text d-none d-sm-inline">
             Nutrition Management
             <span className="brand-sub">Municipal Nutrition Council</span>
           </span>
         </BsNavbar.Brand>
 
-        <BsNavbar.Toggle aria-controls="basic-navbar-nav" />
-        <BsNavbar.Collapse id="basic-navbar-nav">
-          <Nav className="me-auto">
+        <Nav className="me-auto nav-links-row">
             <Nav.Link as={Link} to="/dashboard" className={isActive('/dashboard') ? 'active' : ''}>
               Dashboard
             </Nav.Link>
@@ -60,7 +58,7 @@ const Navbar = () => {
             )}
           </Nav>
 
-          <div className="user-chip mt-3 mt-lg-0">
+          <div className="user-chip">
             <span className={`badge role-badge ${isAdmin ? 'role-admin' : 'role-staff'}`}>
               {user.role}
             </span>
@@ -74,9 +72,7 @@ const Navbar = () => {
             >
               <i className="bi bi-gear-fill"></i>
             </Button>
-            
           </div>
-        </BsNavbar.Collapse>
       </Container>
       <SettingsModal show={showSettings} onClose={() => setShowSettings(false)} />
     </BsNavbar>

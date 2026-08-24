@@ -1,30 +1,20 @@
 // components/layout/OverallReportLayout.jsx
-import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
-import OverallReportSidebar from './OverallReportSidebar'
 import OverallReportDropdown from './OverallReportDropdown'
 import './css/ReportLayout.css'
 
 const OverallReportLayout = () => {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-
-  const toggleSidebar = () => {
-    setSidebarCollapsed(!sidebarCollapsed)
-  }
-
   return (
     <div className="report-layout">
-      <div className={`report-sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
-        <OverallReportSidebar 
-          collapsed={sidebarCollapsed} 
-          onToggleCollapse={toggleSidebar} 
-        />
-      </div>
-      <div className={`report-content ${sidebarCollapsed ? 'expanded' : ''}`}>
-        <div className="overall-report-mobile-nav">
-          <OverallReportDropdown />
-        </div>
-        <Outlet />
+      <div className="layout-body">
+        <main className="content-wrapper">
+          <div className="overall-report-mobile-nav">
+            <OverallReportDropdown />
+          </div>
+          <div className="content-area">
+            <Outlet />
+          </div>
+        </main>
       </div>
     </div>
   )

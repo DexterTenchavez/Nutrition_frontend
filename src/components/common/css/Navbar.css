@@ -163,11 +163,18 @@
 }
 
 /* =====================================================
-   Mobile / phone responsive navbar (below lg breakpoint)
+   Mobile / phone responsive navbar
+   - No hamburger: links always visible in a scrollable row
+   - Brand text hidden on small screens (logo only)
    ===================================================== */
 @media (max-width: 991.98px) {
   .app-navbar {
     padding: 0.5rem 0;
+  }
+
+  /* Allow the row to wrap: logo + user chip on top, links below */
+  .app-navbar .container {
+    flex-wrap: wrap;
   }
 
   .app-navbar .brand-mark {
@@ -176,98 +183,61 @@
     margin-right: auto;
   }
 
-  .app-navbar .brand-mark > span:last-child {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .app-navbar .brand-sub {
-    font-size: 0.6rem;
-    letter-spacing: 0.05em;
-  }
-
-  /* Themed hamburger toggle */
-  .app-navbar .navbar-toggler {
-    border-color: rgba(255, 255, 255, 0.35);
-    padding: 0.3rem 0.5rem;
-  }
-
-  .app-navbar .navbar-toggler:focus {
-    box-shadow: 0 0 0 0.15rem var(--accent-soft);
-  }
-
-  .app-navbar .navbar-toggler-icon {
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba(245,241,232,0.85)' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
-  }
-
-  /* Collapsed menu spacing */
-  .app-navbar .navbar-collapse {
-    padding-top: 0.75rem;
-  }
-
-  /* Touch-friendly nav links */
-  .app-navbar .navbar-nav .nav-link {
-    font-size: 1rem;
-    padding: 0.7rem 0.4rem !important;
-    margin: 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-  }
-
-  .app-navbar .nav-link::after {
-    left: 0.4rem;
-    right: 0.4rem;
-    bottom: 0.3rem;
-  }
-
-  /* User chip full width on mobile */
+  /* User chip sits right of the logo */
   .app-navbar .user-chip {
-    width: 100%;
-    justify-content: space-between;
-    margin-top: 0.85rem !important;
-    padding: 0.5rem 0.6rem 0.5rem 0.9rem;
+    order: 2;
+    width: auto;
+    margin-left: auto;
+    margin-top: 0 !important;
+    gap: 0.4rem;
+    padding: 0.22rem 0.3rem 0.22rem 0.55rem;
   }
 
   .app-navbar .username-text {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    max-width: 90px;
+    font-size: 0.78rem;
+  }
+
+  /* Nav links always visible in one horizontally-scrollable row */
+  .app-navbar .nav-links-row {
+    order: 3;
+    flex-basis: 100%;
+    flex-direction: row !important;
+    align-items: center;
+    gap: 0.25rem;
+    margin-top: 0.4rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Firefox */
+  }
+
+  .app-navbar .nav-links-row::-webkit-scrollbar {
+    display: none;
+  }
+
+  .app-navbar .navbar-nav .nav-link {
+    font-size: 0.88rem;
+    padding: 0.4rem 0.55rem !important;
+    margin: 0;
     white-space: nowrap;
   }
 
-  .app-navbar .settings-btn,
-  .app-navbar .logout-btn {
-    flex-shrink: 0;
+  .app-navbar .nav-link::after {
+    left: 0.55rem;
+    right: 0.55rem;
+    bottom: 0.05rem;
   }
 }
 
 /* Extra-small screens */
 @media (max-width: 420px) {
-  .app-navbar .brand-mark {
-    font-size: 0.88rem;
-  }
-
   .app-navbar .brand-icon {
     width: 30px;
     height: 30px;
     border-radius: 8px;
-    background: #F5F1E8;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    overflow: hidden;
   }
 
-  .app-navbar .brand-icon img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-  }
-
-  .app-navbar .brand-icon svg {
-    width: 17px;
-    height: 17px;
+  .app-navbar .username-text {
+    max-width: 64px;
   }
 }
