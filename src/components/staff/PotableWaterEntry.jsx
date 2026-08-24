@@ -6,6 +6,7 @@ import { BARANGAYS } from '../../utils/constants'
 import { useStaffDataEntry } from './StaffDataEntryContext'
 import DataEntryDropdown from './DataEntryDropdown'
 import NameSuggestionField from './NameSuggestionField'
+import { GuideToggle, GuidePanel } from './InputGuide'
 import './css/recordTable.css'
 import LoadingOverlay from '../common/LoadingOverlay'
 import { Card, Form, Button, Alert, Table, Row, Col, Pagination } from 'react-bootstrap'
@@ -25,6 +26,7 @@ const PotableWaterEntry = () => {
     recordedBy: user?.username || ''
   })
   const [records, setRecords] = useState([])
+  const [showGuide, setShowGuide] = useState(false)
   const [filteredRecords, setFilteredRecords] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -368,12 +370,24 @@ const PotableWaterEntry = () => {
       </Row>
 
       <Card className="mb-4" ref={formCardRef}>
-        <Card.Header>
-          <h6 className="mb-0">{editingId ? 'Edit' : 'New'} Entry</h6>
+        <Card.Header className="d-flex justify-content-between align-items-center">
+                    <h6 className="mb-0">{editingId ? 'Edit' : 'New'} Entry</h6>
+          <GuideToggle open={showGuide} onClick={() => setShowGuide(!showGuide)} />
         </Card.Header>
         <Card.Body>
+          {/* Input guide */}
+          <GuidePanel open={showGuide}>
+            <strong>Potable Water Survey</strong>
+            <ul className="mb-0 ps-3">
+              <li><strong>Purok, Household Name, Record Date</strong> — all required. Household names autocomplete from existing records.</li>
+              <li><strong>Water Source Levels</strong> — switch ON each water access level the household uses:</li>
+              <li><strong>Level 1</strong> — point source (well/spring); <strong>Level 2</strong> — communal faucet; <strong>Level 3</strong> — individual/piped household connection.</li>
+              <li>The year covered is derived automatically from the record date.</li>
+            </ul>
+          </GuidePanel>
           {error && <Alert variant="danger">{error}</Alert>}
           {success && <Alert variant="success">{success}</Alert>}
+
 
           <Form onSubmit={handleSubmit}>
             <Row>

@@ -149,5 +149,6 @@ export function classifyWeightForAge(zScore) {
   if (zScore === null || zScore === undefined || isNaN(zScore)) return ''
   if (zScore < -3.0) return 'Severely Underweight'
   if (zScore < -2.0) return 'Moderately Underweight'
+  if (zScore > 2.0) return 'Overweight'
   return 'Normal'
 }

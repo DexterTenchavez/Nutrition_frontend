@@ -3,13 +3,22 @@ import { useAuth } from '../../hooks/useAuth'
 import { childRecordApi } from '../../api/auth'
 import { BARANGAYS } from '../../utils/constants'
 import { getWeightForAgeZScore, classifyWeightForAge } from '../../utils/whoWeightForAge'
+import { getLengthForAgeZScore, classifyHeightForAge } from '../../utils/whoHeightForAge'
+import { getWeightForLengthHeightZScore, classifyWeightForLengthHeight } from '../../utils/whoWeightForLengthHeight'
+import { exportOptPlusExcel, getWfaStatusCode, getHfaStatusCode, getWfhStatusCode } from '../../utils/optExport'
 import { useStaffDataEntry } from './StaffDataEntryContext'
 import DataEntryDropdown from './DataEntryDropdown'
 import NameSuggestionField from './NameSuggestionField'
 import './css/recordTable.css'
 import LoadingOverlay from '../common/LoadingOverlay'
 import { Card, Form, Button, Alert, Table, Row, Col, Pagination } from 'react-bootstrap'
-import { FaSearch, FaTimes, FaFilter } from 'react-icons/fa'
+import { FaSearch, FaTimes, FaFilter, FaFileExcel, FaInfoCircle } from 'react-icons/fa'
+
+const CHILD_STATUS_BADGES = {
+  N: 'bg-success', UW: 'bg-warning', SUW: 'bg-danger', OW: 'bg-info',
+  St: 'bg-warning', SSt: 'bg-danger', T: 'bg-info',
+  MW: 'bg-warning', SW: 'bg-danger', Ob: 'bg-info',
+}
 
 const ChildRecordsEntry = () => {
   const { user } = useAuth()
@@ -22,6 +31,7 @@ const ChildRecordsEntry = () => {
     purok: purok,
     targetCategory: 'Child (0–59 months)',
     fullName: name,
+    motherOrCaregiver: '',
     sex: '',
     birthdate: '',
     ageMonths: '',
@@ -56,6 +66,7 @@ const ChildRecordsEntry = () => {
     endDate: '',
   })
   const [showFilters, setShowFilters] = useState(false)
+  const [showGuide, setShowGuide] = useState(false)
   const [selectedIds, setSelectedIds] = useState([])
   const [batchDeleting, setBatchDeleting] = useState(false)
 
@@ -192,6 +203,22 @@ const ChildRecordsEntry = () => {
   }
 
   const wfaZScore = getWeightForAgeZScore(formData.weight, formData.ageMonths, formData.sex)
+  const hfaZScore = getLengthForAgeZScore(formData.height, formData.ageMonths, formData.sex)
+  const hfaStatus = classifyHeightForAge(hfaZScore)
+  const wfhZScore = getWeightForLengthHeightZScore(formData.weight, formData.height, formData.ageMonths, formData.sex)
+  const wfhStatus = classifyWeightForLengthHeight(wfhZScore)
+
+  const missingForZ = (needsHeight) => {
+    const missing = []
+    if (!formData.sex) missing.push('Sex')
+    if (!formData.weight) missing.push('Weight')
+    if (needsHeight && !formData.height) missing.push('Height')
+    return missing.length ? `Requires: ${missing.join(', ')}` : ''
+  }
+
+  const handleExportExcel = () => {
+    exportOptPlusExcel({ barangay: selectedBarangay, records: filteredRecords })
+  }
 
   const handleDateChange = (field, value) => {
     const updatedForm = { ...formData, [field]: value }
@@ -275,8 +302,8 @@ const ChildRecordsEntry = () => {
       const weight = parseFloat(formData.weight)
       const height = parseFloat(formData.height)
 
-      if (ageMonths < 6 || ageMonths > 59) {
-        setError('Age must be between 6 and 59 months')
+      if (ageMonths < 0 || ageMonths > 59) {
+        setError('Age must be between 0 and 59 months')
         setLoading(false)
         return
       }
@@ -335,6 +362,7 @@ const ChildRecordsEntry = () => {
         purok: purok,
         targetCategory: 'Child (0–59 months)',
         fullName: name,
+        motherOrCaregiver: '',
         sex: '',
         birthdate: '',
         ageMonths: '',
@@ -360,6 +388,7 @@ const ChildRecordsEntry = () => {
       purok: record.purok,
       targetCategory: record.targetCategory,
       fullName: record.fullName,
+      motherOrCaregiver: record.motherOrCaregiver || '',
       sex: record.sex || '',
       birthdate: record.birthdate ? record.birthdate.split('T')[0] : '',
       ageMonths: record.ageMonths,
@@ -521,10 +550,67 @@ const ChildRecordsEntry = () => {
       </Row>
 
       <Card className="mb-4" ref={formCardRef}>
-        <Card.Header>
+        <Card.Header className="d-flex justify-content-between align-items-center">
           <h6 className="mb-0">{editingId ? 'Edit' : 'New'} Record</h6>
+          <Button
+            variant="link"
+            size="sm"
+            className="p-0 text-decoration-none"
+            onClick={() => setShowGuide(!showGuide)}
+          >
+            <FaInfoCircle className="me-1" />
+            {showGuide ? 'Hide Input Guide' : 'Input Guide'}
+          </Button>
         </Card.Header>
         <Card.Body>
+          {showGuide && (
+            <Alert variant="info" className="small mb-3">
+              <strong>How to fill out this form</strong>
+              <ul className="mb-2 ps-3">
+                <li><strong>Purok / Barangay</strong> — location of the child's household.</li>
+                <li><strong>Full Name &amp; Mother/Caregiver</strong> — duplicates (same child name in the same barangay and purok) are blocked.</li>
+                <li><strong>Record Date</strong> — date the child was measured. <strong>Birthdate</strong> — age in months is computed automatically and must be <strong>0–59 months</strong>.</li>
+                <li><strong>Sex</strong> — required. Boys and girls use different WHO growth tables, so statuses stay blank until sex is chosen.</li>
+                <li><strong>Weight</strong> — in kilograms, e.g., 7.8.</li>
+                <li><strong>Height</strong> — in centimeters:
+                  <ul className="mb-0">
+                    <li><strong>Under 2 years old</strong> (recumbent length): valid range <strong>45 – 110 cm</strong></li>
+                    <li><strong>2 years and older</strong> (standing height): valid range <strong>65 – 120 cm</strong></li>
+                  </ul>
+                </li>
+              </ul>
+              <strong>Auto-computed nutritional status (WHO Z-scores)</strong>
+              <Table size="sm" bordered className="mb-2 mt-1 bg-white">
+                <thead>
+                  <tr><th>Indicator</th><th>Normal</th><th>Moderate</th><th>Severe</th><th>Above normal</th></tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Weight-for-age<br /><span className="text-muted">(underweight)</span></td>
+                    <td>&ge; -2.0 SD</td>
+                    <td>Moderately Underweight: -3.0 to -2.0 SD</td>
+                    <td>Severely Underweight: &lt; -3.0 SD</td>
+                    <td>Overweight: &gt; +2.0 SD</td>
+                  </tr>
+                  <tr>
+                    <td>Height-for-age<br /><span className="text-muted">(stunting)</span></td>
+                    <td>&ge; -2.0 SD</td>
+                    <td>Moderately Stunted: -3.0 to -2.0 SD</td>
+                    <td>Severely Stunted: &lt; -3.0 SD</td>
+                    <td>Tall: &gt; +2.0 SD</td>
+                  </tr>
+                  <tr>
+                    <td>Weight-for-length/height<br /><span className="text-muted">(wasting)</span></td>
+                    <td>-2.0 to +2.0 SD</td>
+                    <td>Moderately Wasted: -3.0 to -2.0 SD</td>
+                    <td>Severely Wasted: &lt; -3.0 SD</td>
+                    <td>Overweight +2 to +3; Obese &gt; +3</td>
+                  </tr>
+                </tbody>
+              </Table>
+              <span className="text-muted">Status codes used in the table and Excel export — WFA: N / UW / SUW / OW · HFA: N / St / SSt / T · WFH: N / MW / SW / OW / Ob</span>
+            </Alert>
+          )}
           {error && <Alert variant="danger">{error}</Alert>}
           {success && <Alert variant="success">{success}</Alert>}
 
@@ -560,6 +646,21 @@ const ChildRecordsEntry = () => {
                   required
                   placeholder="Enter full name"
                 />
+              </Col>
+            </Row>
+
+            <Row>
+              <Col md={8}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Name of Mother or Caregiver</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={formData.motherOrCaregiver}
+                    onChange={(e) => setFormData({ ...formData, motherOrCaregiver: e.target.value })}
+                    required
+                    placeholder="e.g., DELA CRUZ, MARIA"
+                  />
+                </Form.Group>
               </Col>
             </Row>
 
@@ -663,13 +764,14 @@ const ChildRecordsEntry = () => {
                   <Form.Label>Nutritional Status</Form.Label>
                   <Form.Control
                     type="text"
-                    value={formData.nutritionalStatus || 'Auto-calculated'}
+                    value={formData.nutritionalStatus || missingForZ(false) || 'Auto-calculated'}
                     readOnly
                     disabled
                     className={
                       formData.nutritionalStatus === 'Severely Underweight' ? 'text-danger fw-bold' :
                       formData.nutritionalStatus === 'Moderately Underweight' ? 'text-warning fw-bold' :
                       formData.nutritionalStatus === 'Normal' ? 'text-success fw-bold' :
+                      formData.nutritionalStatus === 'Overweight' ? 'text-info fw-bold' :
                       ''
                     }
                   />
@@ -680,12 +782,94 @@ const ChildRecordsEntry = () => {
                   <Form.Label>Weight-for-Age Z-Score</Form.Label>
                   <Form.Control
                     type="text"
-                    value={wfaZScore !== null ? `${wfaZScore.toFixed(2)} SD` : 'Auto-calculated'}
+                    value={wfaZScore !== null ? `${wfaZScore.toFixed(2)} SD` : (missingForZ(false) || 'Auto-calculated')}
                     readOnly
                     disabled
                   />
                   <Form.Text className="text-muted">
-                    WHO Z-score: Normal (&ge; -2.0), Moderate (-3.0 to -2.0), Severe (&lt; -3.0)
+                    WHO Z-score: Normal (&ge; -2.0), Moderate (-3.0 to -2.0), Severe (&lt; -3.0), Overweight (&gt; +2.0)
+                  </Form.Text>
+                </Form.Group>
+              </Col>
+            </Row>
+
+            <Row>
+              <Col md={{ span: 4, offset: 4 }}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Height-for-Age Status</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={hfaStatus || missingForZ(true) || 'Auto-calculated'}
+                    readOnly
+                    disabled
+                    className={
+                      hfaStatus === 'Severely Stunted' ? 'text-danger fw-bold' :
+                      hfaStatus === 'Moderately Stunted' ? 'text-warning fw-bold' :
+                      hfaStatus === 'Normal' ? 'text-success fw-bold' :
+                      hfaStatus === 'Tall' ? 'text-info fw-bold' :
+                      ''
+                    }
+                  />
+                </Form.Group>
+              </Col>
+              <Col md={4}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Height-for-Age Z-Score</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={hfaZScore !== null ? `${hfaZScore.toFixed(2)} SD` : (missingForZ(true) || 'Auto-calculated')}
+                    readOnly
+                    disabled
+                  />
+                  <Form.Text className="text-muted">
+                    Stunting: Normal (&ge; -2.0), Moderately Stunted (-3.0 to -2.0), Severely Stunted (&lt; -3.0), Tall (&gt; +2.0)
+                  </Form.Text>
+                </Form.Group>
+              </Col>
+            </Row>
+
+            <Row>
+              <Col md={{ span: 4, offset: 4 }}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Weight for Length/Height Status</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={wfhStatus || missingForZ(true) || 'Auto-calculated'}
+                    readOnly
+                    disabled
+                    className={
+                      wfhStatus === 'Severely Wasted' ? 'text-danger fw-bold' :
+                      wfhStatus === 'Moderately Wasted' ? 'text-warning fw-bold' :
+                      wfhStatus === 'Overweight' || wfhStatus === 'Obese' ? 'text-info fw-bold' :
+                      wfhStatus === 'Normal' ? 'text-success fw-bold' :
+                      ''
+                    }
+                  />
+                </Form.Group>
+              </Col>
+              <Col md={4}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Weight for Lt/Ht Z-Score</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={
+                      wfhZScore !== null ? `${wfhZScore.toFixed(2)} SD` :
+                      (missingForZ(true) ||
+                        (formData.height && formData.ageMonths !== '' && (
+                          (() => {
+                            const age = parseInt(formData.ageMonths)
+                            const h = parseFloat(formData.height)
+                            if (isNaN(age) || isNaN(h)) return false
+                            if (age < 24) return h < 45 || h > 110
+                            return h < 65 || h > 120
+                          })()
+                        )) ? 'Height outside measurable range' : 'Auto-calculated')
+                    }
+                    readOnly
+                    disabled
+                  />
+                  <Form.Text className="text-muted">
+                    Wasting: Normal (-2.0 to +2.0), MW/SW (&lt; -2.0/-3.0), Overweight (+2 to +3), Obese (&gt; +3)
                   </Form.Text>
                 </Form.Group>
               </Col>
@@ -702,6 +886,7 @@ const ChildRecordsEntry = () => {
                   purok: purok,
                   targetCategory: 'Child (0–59 months)',
                   fullName: name,
+                  motherOrCaregiver: '',
                   sex: '',
                   birthdate: '',
                   ageMonths: '',
@@ -750,11 +935,19 @@ const ChildRecordsEntry = () => {
                     </Button>
                   )}
                 </div>
-                <Button 
+                <Button
                   variant={showFilters ? "primary" : "outline-secondary"}
                   onClick={() => setShowFilters(!showFilters)}
                 >
                   <FaFilter /> Filters
+                </Button>
+                <Button
+                  variant="outline-success"
+                  onClick={handleExportExcel}
+                  disabled={filteredRecords.length === 0}
+                  title="Export filtered records to OPT Plus Excel format"
+                >
+                  <FaFileExcel /> Export Excel
                 </Button>
                 {(searchTerm || Object.values(filters).some(v => v)) && (
                   <Button variant="danger" size="sm" onClick={clearFilters}>
@@ -794,6 +987,7 @@ const ChildRecordsEntry = () => {
                     <option value="Normal">Normal</option>
                     <option value="Moderately Underweight">Moderately Underweight</option>
                     <option value="Severely Underweight">Severely Underweight</option>
+                    <option value="Overweight">Overweight</option>
                     <option value="Underweight">Underweight (old records)</option>
                   </Form.Select>
                 </Form.Group>
@@ -805,7 +999,7 @@ const ChildRecordsEntry = () => {
                   <Form.Label>Age Min</Form.Label>
                   <Form.Control
                     type="number"
-                    min="6"
+                    min="0"
                     max="59"
                     placeholder="Min"
                     value={filters.ageMin}
@@ -818,7 +1012,7 @@ const ChildRecordsEntry = () => {
                   <Form.Label>Age Max</Form.Label>
                   <Form.Control
                     type="number"
-                    min="6"
+                    min="0"
                     max="59"
                     placeholder="Max"
                     value={filters.ageMax}
@@ -917,12 +1111,15 @@ const ChildRecordsEntry = () => {
                 </th>
                 <th>#</th>
                 <th>Purok</th>
+                <th>Mother/Caregiver</th>
                 <th>Name</th>
-                <th>Birthdate</th>
+                <th>Sex</th>
                 <th>Age (mos)</th>
                 <th>Weight</th>
                 <th>Height</th>
-                <th>Status</th>
+                <th>WFA</th>
+                <th>HFA</th>
+                <th>WFH</th>
                 <th>Recorded Date</th>
                 <th>Actions</th>
               </tr>
@@ -930,53 +1127,61 @@ const ChildRecordsEntry = () => {
             <tbody>
               {currentRecords.length === 0 ? (
                 <tr>
-                  <td colSpan="11" className="text-center py-3 text-muted">
+                  <td colSpan="14" className="text-center py-3 text-muted">
                     {searchTerm || Object.values(filters).some(v => v) 
                       ? 'No records found matching your filters' 
                       : 'No records found'}
                   </td>
                 </tr>
               ) : (
-                currentRecords.map((record, index) => (
-                  <tr key={record.id} onClick={() => handleSelectRecord(record.id)} style={{ cursor: 'pointer' }} className={selectedIds.includes(record.id) ? 'record-selected' : ''}>
-                    <td className="record-check-cell">
-                      <Form.Check
-                        type="checkbox"
-                        checked={selectedIds.includes(record.id)}
-                        onChange={(e) => { e.stopPropagation(); handleSelectRecord(record.id) }}
-                      />
-                    </td>
-                    <td>{indexOfFirstRecord + index + 1}</td>
-                    <td>Purok {record.purok}</td>
-                    <td>{record.fullName}</td>
-                    <td>{record.birthdate ? new Date(record.birthdate).toLocaleDateString() : 'N/A'}</td>
-                    <td>{record.ageMonths}</td>
-                    <td>{record.weight} kg</td>
-                    <td>{record.height} cm</td>
-                    <td>
-                      <span className={`badge ${
-                        record.nutritionalStatus === 'Normal' ? 'bg-success' :
-                        record.nutritionalStatus === 'Moderately Underweight' ? 'bg-warning' :
-                        record.nutritionalStatus === 'Severely Underweight' ? 'bg-danger' :
-                        record.nutritionalStatus === 'Underweight' ? 'bg-warning' :
-                        'bg-secondary'
-                      }`}>
-                        {record.nutritionalStatus}
-                      </span>
-                    </td>
-                    <td>{record.recordedDate ? new Date(record.recordedDate).toLocaleDateString() : 'N/A'}</td>
-                    <td>
-                      <Button variant="outline-primary" size="sm" className="action-btn action-edit" onClick={(e) => { e.stopPropagation(); handleEdit(record) }}>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                        Edit
-                      </Button>
-                      <Button variant="outline-danger" size="sm" className="action-btn action-delete ms-1" onClick={(e) => { e.stopPropagation(); handleDelete(record.id) }}>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                        Delete
-                      </Button>
-                    </td>
-                  </tr>
-                ))
+                currentRecords.map((record, index) => {
+                  const wfaCode = getWfaStatusCode(record)
+                  const hfaCode = getHfaStatusCode(record)
+                  const wfhCode = getWfhStatusCode(record)
+                  return (
+                    <tr key={record.id} onClick={() => handleSelectRecord(record.id)} style={{ cursor: 'pointer' }} className={selectedIds.includes(record.id) ? 'record-selected' : ''}>
+                      <td className="record-check-cell">
+                        <Form.Check
+                          type="checkbox"
+                          checked={selectedIds.includes(record.id)}
+                          onChange={(e) => { e.stopPropagation(); handleSelectRecord(record.id) }}
+                        />
+                      </td>
+                      <td>{indexOfFirstRecord + index + 1}</td>
+                      <td>Purok {record.purok}</td>
+                      <td>{record.motherOrCaregiver || '—'}</td>
+                      <td>{record.fullName}</td>
+                      <td>{record.sex === 'Male' ? 'M' : record.sex === 'Female' ? 'F' : '—'}</td>
+                      <td>{record.ageMonths}</td>
+                      <td>{record.weight} kg</td>
+                      <td>{record.height} cm</td>
+                      <td>
+                        {wfaCode ? (
+                          <span className={`badge ${CHILD_STATUS_BADGES[wfaCode] || 'bg-secondary'}`}>{wfaCode}</span>
+                        ) : record.nutritionalStatus ? (
+                          <span className="badge bg-secondary" title="Legacy record - select sex to compute">{record.nutritionalStatus}</span>
+                        ) : '—'}
+                      </td>
+                      <td>
+                        {hfaCode ? <span className={`badge ${CHILD_STATUS_BADGES[hfaCode] || 'bg-secondary'}`}>{hfaCode}</span> : '—'}
+                      </td>
+                      <td>
+                        {wfhCode ? <span className={`badge ${CHILD_STATUS_BADGES[wfhCode] || 'bg-secondary'}`}>{wfhCode}</span> : '—'}
+                      </td>
+                      <td>{record.recordedDate ? new Date(record.recordedDate).toLocaleDateString() : 'N/A'}</td>
+                      <td>
+                        <Button variant="outline-primary" size="sm" className="action-btn action-edit" onClick={(e) => { e.stopPropagation(); handleEdit(record) }}>
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                          Edit
+                        </Button>
+                        <Button variant="outline-danger" size="sm" className="action-btn action-delete ms-1" onClick={(e) => { e.stopPropagation(); handleDelete(record.id) }}>
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                          Delete
+                        </Button>
+                      </td>
+                    </tr>
+                  )
+                })
               )}
             </tbody>
           </Table>

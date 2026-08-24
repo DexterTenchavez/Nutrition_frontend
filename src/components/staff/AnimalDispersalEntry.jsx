@@ -6,6 +6,7 @@ import { BARANGAYS } from '../../utils/constants'
 import { useStaffDataEntry } from './StaffDataEntryContext'
 import DataEntryDropdown from './DataEntryDropdown'
 import NameSuggestionField from './NameSuggestionField'
+import { GuideToggle, GuidePanel } from './InputGuide'
 import './css/recordTable.css'
 import LoadingOverlay from '../common/LoadingOverlay'
 import { Card, Form, Button, Alert, Table, Row, Col, Pagination } from 'react-bootstrap'
@@ -35,6 +36,7 @@ const AnimalDispersalEntry = () => {
     recordedBy: user?.username || ''
   })
   const [records, setRecords] = useState([])
+  const [showGuide, setShowGuide] = useState(false)
   const [filteredRecords, setFilteredRecords] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -386,12 +388,23 @@ const AnimalDispersalEntry = () => {
       </Row>
 
       <Card className="mb-4" ref={formCardRef}>
-        <Card.Header>
-          <h6 className="mb-0">{editingId ? 'Edit' : 'New'} Entry</h6>
+        <Card.Header className="d-flex justify-content-between align-items-center">
+                    <h6 className="mb-0">{editingId ? 'Edit' : 'New'} Entry</h6>
+          <GuideToggle open={showGuide} onClick={() => setShowGuide(!showGuide)} />
         </Card.Header>
         <Card.Body>
+          {/* Input guide */}
+          <GuidePanel open={showGuide}>
+            <strong>Household with Malnourished Children Received Animal Dispersal</strong>
+            <ul className="mb-0 ps-3">
+              <li><strong>Purok, Household Name, Record Date</strong> — all required. Household names autocomplete from existing records.</li>
+              <li><strong>Animals Dispersed</strong> — enter how many male (M) and female (F) animals of each species the household received: Chicken, Pig, Goat, Cow, Carabao, and Other.</li>
+              <li>Counts must be whole numbers, zero or higher — negative values are not accepted. Leave as 0 if the species was not given.</li>
+            </ul>
+          </GuidePanel>
           {error && <Alert variant="danger">{error}</Alert>}
           {success && <Alert variant="success">{success}</Alert>}
+
 
           <Form onSubmit={handleSubmit}>
             <Row>

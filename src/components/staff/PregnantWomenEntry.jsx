@@ -6,6 +6,7 @@ import { BARANGAYS } from '../../utils/constants'
 import { useStaffDataEntry } from './StaffDataEntryContext'
 import DataEntryDropdown from './DataEntryDropdown'
 import NameSuggestionField from './NameSuggestionField'
+import { GuideToggle, GuidePanel } from './InputGuide'
 import './css/recordTable.css'
 import LoadingOverlay from '../common/LoadingOverlay'
 import { Card, Form, Button, Alert, Table, Row, Col, Pagination } from 'react-bootstrap'
@@ -26,6 +27,7 @@ const PregnantWomenEntry = () => {
     recordedBy: user?.username || ''
   })
   const [records, setRecords] = useState([])
+  const [showGuide, setShowGuide] = useState(false)
   const [filteredRecords, setFilteredRecords] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -425,12 +427,24 @@ const PregnantWomenEntry = () => {
       </Row>
 
       <Card className="mb-4" ref={formCardRef}>
-        <Card.Header>
-          <h6 className="mb-0">{editingId ? 'Edit' : 'New'} Entry</h6>
+        <Card.Header className="d-flex justify-content-between align-items-center">
+                    <h6 className="mb-0">{editingId ? 'Edit' : 'New'} Entry</h6>
+          <GuideToggle open={showGuide} onClick={() => setShowGuide(!showGuide)} />
         </Card.Header>
         <Card.Body>
+          {/* Input guide */}
+          <GuidePanel open={showGuide}>
+            <strong>Pregnant Women Records</strong>
+            <ul className="mb-0 ps-3">
+              <li><strong>Purok</strong> and <strong>Woman's Name</strong> are required; Record Date is the top control above this card.</li>
+              <li><strong>Weight (KG)</strong> and <strong>Height (CM)</strong> — required, measured at the current visit; negative values are not accepted.</li>
+              <li><strong>BMI</strong> is computed automatically: weight ÷ height in meters². Category: below 18.5 = Low BMI · 18.5–24.9 = Normal BMI · 25 and above = High BMI.</li>
+              <li>BMI and category update live as you type the weight and height.</li>
+            </ul>
+          </GuidePanel>
           {error && <Alert variant="danger">{error}</Alert>}
           {success && <Alert variant="success">{success}</Alert>}
+
 
           <Form onSubmit={handleSubmit}>
             <Row>

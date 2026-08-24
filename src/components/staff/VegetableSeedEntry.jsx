@@ -6,6 +6,7 @@ import { BARANGAYS, VEGETABLE_SEEDS, BENEFICIARY_TYPES } from '../../utils/const
 import { useStaffDataEntry } from './StaffDataEntryContext'
 import DataEntryDropdown from './DataEntryDropdown'
 import NameSuggestionField from './NameSuggestionField'
+import { GuideToggle, GuidePanel } from './InputGuide'
 import './css/recordTable.css'
 import LoadingOverlay from '../common/LoadingOverlay'
 import NotificationModal from '../common/NotificationModal'
@@ -27,6 +28,7 @@ const VegetableSeedEntry = () => {
     recordedBy: user?.username || ''
   })
   const [records, setRecords] = useState([])
+  const [showGuide, setShowGuide] = useState(false)
   const [filteredRecords, setFilteredRecords] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -441,11 +443,23 @@ const VegetableSeedEntry = () => {
       </Row>
 
       <Card className="mb-4" ref={formCardRef}>
-        <Card.Header>
-          <h6 className="mb-0">{editingId ? 'Edit' : 'New'} Entry</h6>
+        <Card.Header className="d-flex justify-content-between align-items-center">
+                    <h6 className="mb-0">{editingId ? 'Edit' : 'New'} Entry</h6>
+          <GuideToggle open={showGuide} onClick={() => setShowGuide(!showGuide)} />
         </Card.Header>
         <Card.Body>
+          {/* Input guide */}
+          <GuidePanel open={showGuide}>
+            <strong>Vegetable Seed Distribution</strong>
+            <ul className="mb-0 ps-3">
+              <li><strong>Purok, Household Name, Record Date, Beneficiaries</strong> — all required. Choose "Others" as beneficiary to type a custom one.</li>
+              <li><strong>Seed Types</strong> — add one row per vegetable seed given (select from the list or choose "Others" to type a variety not listed).</li>
+              <li><strong>Count (per Packs)</strong> — whole number of packs distributed; zero or higher.</li>
+              <li>Rows left without a seed type are ignored when saving. Use "+ Add Seed Type" for additional seeds and "×" to remove a row.</li>
+            </ul>
+          </GuidePanel>
           {error && <Alert variant="danger">{error}</Alert>}
+
 
           <Form onSubmit={handleSubmit}>
             <Row>

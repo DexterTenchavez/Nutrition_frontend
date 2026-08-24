@@ -6,6 +6,7 @@ import { BARANGAYS } from '../../utils/constants'
 import { useStaffDataEntry } from './StaffDataEntryContext'
 import DataEntryDropdown from './DataEntryDropdown'
 import NameSuggestionField from './NameSuggestionField'
+import { GuideToggle, GuidePanel } from './InputGuide'
 import './css/recordTable.css'
 import LoadingOverlay from '../common/LoadingOverlay'
 import { Card, Form, Button, Alert, Table, Row, Col, Pagination } from 'react-bootstrap'
@@ -36,6 +37,7 @@ const IodizedSaltEntry = () => {
     recordedBy: user?.username || ''
   })
   const [records, setRecords] = useState([])
+  const [showGuide, setShowGuide] = useState(false)
   const [filteredRecords, setFilteredRecords] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -372,12 +374,25 @@ const IodizedSaltEntry = () => {
       </Row>
 
       <Card className="mb-4" ref={formCardRef}>
-        <Card.Header>
-          <h6 className="mb-0">{editingId ? 'Edit' : 'New'} Store Entry</h6>
+        <Card.Header className="d-flex justify-content-between align-items-center">
+                    <h6 className="mb-0">{editingId ? 'Edit' : 'New'} Store Entry</h6>
+          <GuideToggle open={showGuide} onClick={() => setShowGuide(!showGuide)} />
         </Card.Header>
         <Card.Body>
+          {/* Input guide */}
+          <GuidePanel open={showGuide}>
+            <strong>Iodized Salt Survey</strong>
+            <ul className="mb-0 ps-3">
+              <li><strong>Purok</strong> and <strong>Record Date</strong> (top control) are required; enter the <strong>Store Name</strong> being surveyed.</li>
+              <li>Tick <strong>only the brands actually present/available in the store</strong> at the time of visit:</li>
+              <li><strong>Fine Iodized Salt</strong>: Fidel, UFC, Pacific Bay, or type other brands under Others.</li>
+              <li><strong>Rock Salt (Coarse)</strong>: Atlantic, Fidel, Lasap, Pag-Asa, Jay, or Others.</li>
+              <li><strong>Fortified Cooking Oil</strong>: UFC, Jolly, or Others.</li>
+            </ul>
+          </GuidePanel>
           {error && <Alert variant="danger">{error}</Alert>}
           {success && <Alert variant="success">{success}</Alert>}
+
 
           <Form onSubmit={handleSubmit}>
             <Row>
