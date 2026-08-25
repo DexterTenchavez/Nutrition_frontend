@@ -11,7 +11,7 @@
 /* =====================================================
    Phone selection mode (reached by long-pressing a row)
    ===================================================== */
-.staff-select-done {
+.staff-select-cancel {
   position: fixed;
   left: 50%;
   bottom: 16px;
@@ -24,15 +24,15 @@
   padding: 11px 26px;
   font-size: 14px;
   font-weight: 700;
-  background: var(--accent, #2E8B6F);
-  color: var(--accent-contrast, #ffffff);
+  background: #e53e3e;
+  color: #ffffff;
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
   cursor: pointer;
   transition: background 0.15s ease;
 }
 
-.staff-select-done:hover {
-  background: var(--accent-hover, #1F6A53);
+.staff-select-cancel:hover {
+  background: #c53030;
 }
 
 /* =====================================================

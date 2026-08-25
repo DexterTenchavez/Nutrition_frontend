@@ -10,6 +10,7 @@ import { useStaffDataEntry } from './StaffDataEntryContext'
 import DataEntryDropdown from './DataEntryDropdown'
 import NameSuggestionField from './NameSuggestionField'
 import './css/recordTable.css'
+import './css/inputGuide.css'
 import LoadingOverlay from '../common/LoadingOverlay'
 import { Card, Form, Button, Alert, Table, Row, Col, Pagination } from 'react-bootstrap'
 import { FaSearch, FaTimes, FaFilter, FaFileExcel, FaInfoCircle } from 'react-icons/fa'
@@ -24,7 +25,7 @@ const ChildRecordsEntry = () => {
   const { user } = useAuth()
   const isAdmin = user?.role === 'admin'
   const userBarangay = user?.barangay || ''
-  const { selectedBarangay, setSelectedBarangay, searchTerm, setSearchTerm, recordDate, setRecordDate, purok, setPurok, name, setName } = useStaffDataEntry()
+  const { selectedBarangay, setSelectedBarangay, searchTerm, setSearchTerm, recordDate, setRecordDate, purok, setPurok, name, setName, selectMode, setSelectMode } = useStaffDataEntry()
 
   const [formData, setFormData] = useState({
     barangay: userBarangay,
@@ -69,6 +70,12 @@ const ChildRecordsEntry = () => {
   const [showGuide, setShowGuide] = useState(false)
   const [selectedIds, setSelectedIds] = useState([])
   const [batchDeleting, setBatchDeleting] = useState(false)
+
+  useEffect(() => {
+    if (!selectMode) {
+      setSelectedIds([])
+    }
+  }, [selectMode])
 
   useEffect(() => {
     if (selectedBarangay) {
@@ -564,7 +571,7 @@ const ChildRecordsEntry = () => {
         </Card.Header>
         <Card.Body>
           {showGuide && (
-            <Alert variant="info" className="small mb-3">
+            <Alert variant="info" className="small mb-3 input-guide">
               <strong>How to fill out this form</strong>
               <ul className="mb-2 ps-3">
                 <li><strong>Purok / Barangay</strong> — location of the child's household.</li>
@@ -580,11 +587,12 @@ const ChildRecordsEntry = () => {
                 </li>
               </ul>
               <strong>Auto-computed nutritional status (WHO Z-scores)</strong>
-              <Table size="sm" bordered className="mb-2 mt-1 bg-white">
-                <thead>
-                  <tr><th>Indicator</th><th>Normal</th><th>Moderate</th><th>Severe</th><th>Above normal</th></tr>
-                </thead>
-                <tbody>
+              <div className="table-responsive">
+                <Table size="sm" bordered className="mb-2 mt-1 bg-white">
+                  <thead>
+                    <tr><th>Indicator</th><th>Normal</th><th>Moderate</th><th>Severe</th><th>Above normal</th></tr>
+                  </thead>
+                  <tbody>
                   <tr>
                     <td>Weight-for-age<br /><span className="text-muted">(underweight)</span></td>
                     <td>&ge; -2.0 SD</td>
@@ -606,8 +614,9 @@ const ChildRecordsEntry = () => {
                     <td>Severely Wasted: &lt; -3.0 SD</td>
                     <td>Overweight +2 to +3; Obese &gt; +3</td>
                   </tr>
-                </tbody>
-              </Table>
+                  </tbody>
+                </Table>
+              </div>
               <span className="text-muted">Status codes used in the table and Excel export — WFA: N / UW / SUW / OW · HFA: N / St / SSt / T · WFH: N / MW / SW / OW / Ob</span>
             </Alert>
           )}
@@ -636,7 +645,7 @@ const ChildRecordsEntry = () => {
               </Col>
               <Col md={8}>
                 <NameSuggestionField
-                  label="Full Name"
+                  label="Full Name of the Child"
                   value={formData.fullName}
                   onChange={(value) => {
                     setFormData({ ...formData, fullName: value })
@@ -644,7 +653,7 @@ const ChildRecordsEntry = () => {
                   }}
                   suggestions={records.map((r) => r.fullName).filter(Boolean)}
                   required
-                  placeholder="Enter full name"
+                  placeholder="e.g., Jotojot, Jonathan"
                 />
               </Col>
             </Row>
@@ -786,9 +795,6 @@ const ChildRecordsEntry = () => {
                     readOnly
                     disabled
                   />
-                  <Form.Text className="text-muted">
-                    WHO Z-score: Normal (&ge; -2.0), Moderate (-3.0 to -2.0), Severe (&lt; -3.0), Overweight (&gt; +2.0)
-                  </Form.Text>
                 </Form.Group>
               </Col>
             </Row>
@@ -821,9 +827,6 @@ const ChildRecordsEntry = () => {
                     readOnly
                     disabled
                   />
-                  <Form.Text className="text-muted">
-                    Stunting: Normal (&ge; -2.0), Moderately Stunted (-3.0 to -2.0), Severely Stunted (&lt; -3.0), Tall (&gt; +2.0)
-                  </Form.Text>
                 </Form.Group>
               </Col>
             </Row>
@@ -868,9 +871,6 @@ const ChildRecordsEntry = () => {
                     readOnly
                     disabled
                   />
-                  <Form.Text className="text-muted">
-                    Wasting: Normal (-2.0 to +2.0), MW/SW (&lt; -2.0/-3.0), Overweight (+2 to +3), Obese (&gt; +3)
-                  </Form.Text>
                 </Form.Group>
               </Col>
             </Row>
@@ -909,9 +909,22 @@ const ChildRecordsEntry = () => {
             <Col>
               <h6 className="mb-0 d-inline">Records ({filteredRecords.length} total)</h6>
               {selectedIds.length > 0 && (
-                <Button variant="danger" size="sm" className="ms-2" onClick={handleBatchDelete} disabled={batchDeleting}>
-                  {batchDeleting ? 'Deleting...' : `Delete Selected (${selectedIds.length})`}
-                </Button>
+                <>
+                  <Button variant="danger" size="sm" className="ms-2" onClick={handleBatchDelete} disabled={batchDeleting}>
+                    {batchDeleting ? 'Deleting...' : `Delete Selected (${selectedIds.length})`}
+                  </Button>
+                  <Button
+                    variant="outline-secondary"
+                    size="sm"
+                    className="ms-2"
+                    onClick={() => {
+                      setSelectedIds([])
+                      setSelectMode(false)
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </>
               )}
             </Col>
             <Col md={6}>
@@ -1112,7 +1125,7 @@ const ChildRecordsEntry = () => {
                 <th>#</th>
                 <th>Purok</th>
                 <th>Mother/Caregiver</th>
-                <th>Name</th>
+                <th>Name of Child</th>
                 <th>Birthdate</th>
                 <th>Sex</th>
                 <th>Age (mos)</th>

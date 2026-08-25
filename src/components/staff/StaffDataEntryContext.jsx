@@ -10,6 +10,7 @@ export const StaffDataEntryProvider = ({ children }) => {
   const [recordDate, setRecordDate] = useState(() => new Date().toISOString().split('T')[0])
   const [purok, setPurok] = useState('')
   const [name, setName] = useState('')
+  const [selectMode, setSelectMode] = useState(false)
 
   return (
     <StaffDataEntryContext.Provider
@@ -24,6 +25,8 @@ export const StaffDataEntryProvider = ({ children }) => {
         setPurok,
         name,
         setName,
+        selectMode,
+        setSelectMode,
       }}
     >
       {children}

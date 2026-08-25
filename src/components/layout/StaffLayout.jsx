@@ -1,24 +1,28 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useCallback } from 'react'
 import { Outlet } from 'react-router-dom'
-import { StaffDataEntryProvider } from '../staff/StaffDataEntryContext'
+import { StaffDataEntryProvider, useStaffDataEntry } from '../staff/StaffDataEntryContext'
 import './css/StaffLayout.css'
 
 const TAP_THRESHOLD = 8
 const LONG_PRESS_MS = 450
 
-const StaffLayout = () => {
+const StaffLayout = () => (
+  <StaffDataEntryProvider>
+    <StaffLayoutContent />
+  </StaffDataEntryProvider>
+)
+
+const StaffLayoutContent = () => {
+  const { selectMode, setSelectMode } = useStaffDataEntry()
   const touchInfo = useRef({ startX: 0, startY: 0, scrolled: false, longPressed: false })
   const longPressTimer = useRef(null)
   const selectModeRef = useRef(false)
-  const [selectMode, setSelectModeState] = useState(false)
   const isTouch = useRef(false)
 
-  const setSelectMode = useCallback((value) => {
-    selectModeRef.current = value
-    setSelectModeState(value)
-  }, [])
+  useEffect(() => {
+    selectModeRef.current = selectMode
+  }, [selectMode])
 
-  // Hard press on a phone row: select only that row and show checkboxes
   const handleLongPressSelect = useCallback((target) => {
     const row = target && target.closest('.record-table tbody tr')
     if (row) {
@@ -28,10 +32,6 @@ const StaffLayout = () => {
       }
     }
     setSelectMode(true)
-  }, [setSelectMode])
-
-  const exitSelectMode = useCallback(() => {
-    setSelectMode(false)
   }, [setSelectMode])
 
   useEffect(() => {
@@ -119,20 +119,18 @@ const StaffLayout = () => {
   }, [handleLongPressSelect])
 
   return (
-    <StaffDataEntryProvider>
-      <div className={`staff-layout${selectMode ? ' record-select-mode' : ''}`}>
-        <div className="content-area">
-          <Outlet />
-        </div>
-
-        {selectMode && (
-          <button type="button" className="staff-select-done" onClick={exitSelectMode}>
-            <i className="bi bi-check-lg me-1"></i>
-            Done
-          </button>
-        )}
+    <div className={`staff-layout${selectMode ? ' record-select-mode' : ''}`}>
+      <div className="content-area">
+        <Outlet />
       </div>
-    </StaffDataEntryProvider>
+
+      {selectMode && (
+        <button type="button" className="staff-select-cancel" onClick={() => setSelectMode(false)}>
+          <i className="bi bi-x-lg me-1"></i>
+          Cancel
+        </button>
+      )}
+    </div>
   )
 }
 

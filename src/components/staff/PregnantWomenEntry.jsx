@@ -14,7 +14,7 @@ import { FaSearch, FaTimes, FaFilter } from 'react-icons/fa'
 
 const PregnantWomenEntry = () => {
   const { user } = useAuth()
-  const { selectedBarangay, setSelectedBarangay, searchTerm, setSearchTerm, recordDate, setRecordDate, purok, setPurok, name, setName } = useStaffDataEntry()
+  const { selectedBarangay, setSelectedBarangay, searchTerm, setSearchTerm, recordDate, setRecordDate, purok, setPurok, name, setName, selectMode, setSelectMode } = useStaffDataEntry()
   const [formData, setFormData] = useState({
     barangay: user?.barangay || '',
     purok: purok,
@@ -51,6 +51,12 @@ const PregnantWomenEntry = () => {
   const [showFilters, setShowFilters] = useState(false)
   const [selectedIds, setSelectedIds] = useState([])
   const [batchDeleting, setBatchDeleting] = useState(false)
+
+  useEffect(() => {
+    if (!selectMode) {
+      setSelectedIds([])
+    }
+  }, [selectMode])
 
   const isAdmin = user?.role === 'admin'
 
@@ -580,9 +586,22 @@ const PregnantWomenEntry = () => {
             <Col>
               <h6 className="mb-0 d-inline">Records ({filteredRecords.length} total)</h6>
               {selectedIds.length > 0 && (
-                <Button variant="danger" size="sm" className="ms-2" onClick={handleBatchDelete} disabled={batchDeleting}>
-                  {batchDeleting ? 'Deleting...' : `Delete Selected (${selectedIds.length})`}
-                </Button>
+                <>
+                  <Button variant="danger" size="sm" className="ms-2" onClick={handleBatchDelete} disabled={batchDeleting}>
+                    {batchDeleting ? 'Deleting...' : `Delete Selected (${selectedIds.length})`}
+                  </Button>
+                  <Button
+                    variant="outline-secondary"
+                    size="sm"
+                    className="ms-2"
+                    onClick={() => {
+                      setSelectedIds([])
+                      setSelectMode(false)
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </>
               )}
             </Col>
             <Col md={6}>
