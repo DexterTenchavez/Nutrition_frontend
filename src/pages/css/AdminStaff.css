@@ -112,6 +112,36 @@
   gap: 8px;
 }
 
+/* Password show/hide toggle */
+.password-input-wrapper {
+  position: relative;
+}
+
+.password-input-wrapper .form-control {
+  padding-right: 45px;
+}
+
+.password-toggle-btn {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 0;
+  color: #6c757d;
+  border: none;
+  background: transparent;
+  z-index: 10;
+}
+
+.password-toggle-btn:hover {
+  color: #198754;
+  background: transparent;
+}
+
+.password-toggle-btn:focus {
+  box-shadow: none;
+}
+
 @media (max-width: 575.98px) {
   .admin-staff-search {
     width: 100%;
