@@ -8,7 +8,7 @@ import nutritionLogo from '../../assets/nutritionlogo.jpg'
 
 const AnimalRaisingReport = () => {
   const { user } = useAuth()
-  const isAdmin = user?.role === 'admin'
+  const isAdmin = user?.role === 'admin' || user?.role === 'superadmin'
   const userBarangay = user?.barangay || ''
   
   const [barangay, setBarangay] = useState(isAdmin ? '' : userBarangay)

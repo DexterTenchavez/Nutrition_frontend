@@ -18,8 +18,16 @@ export const AuthProvider = ({ children }) => {
   }, [])
 
   const login = async (credentials) => {
+    return handleLogin(() => authApi.login(credentials))
+  }
+
+  const superadminLogin = async (credentials) => {
+    return handleLogin(() => authApi.superadminLogin(credentials))
+  }
+
+  const handleLogin = async (request) => {
     try {
-      const data = await authApi.login(credentials)
+      const data = await request()
       setUser({
         id: data.id,
         username: data.username,
@@ -74,11 +82,13 @@ export const AuthProvider = ({ children }) => {
     user,
     loading,
     login,
+    superadminLogin,
     register,
     logout,
     isAuthenticated: !!user,
-    isAdmin: user?.role === 'admin',
+    isAdmin: user?.role === 'admin' || user?.role === 'superadmin',
     isStaff: user?.role === 'staff',
+    isSuperAdmin: user?.role === 'superadmin',
   }
 
   return (

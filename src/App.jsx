@@ -3,11 +3,13 @@ import { useAuth } from './hooks/useAuth'
 import Navbar from './components/common/Navbar'
 import ProtectedRoute from './components/common/ProtectedRoute'
 import Login from './pages/Login'
+import SuperAdminLogin from './pages/SuperAdminLogin'
 import Dashboard from './pages/Dashboard'
 import AllRecords from './pages/AllRecords'
 import BarangayReportLayout from './components/layout/BarangayReportLayout'
 import OverallReportLayout from './components/layout/OverallReportLayout'
 import AdminStaff from './pages/AdminStaff'
+import SuperAdminDashboard from './pages/SuperAdminDashboard'
 
 import StaffLayout from './components/layout/StaffLayout'
 import ChildRecordsEntry from './components/staff/ChildRecordsEntry'
@@ -62,7 +64,10 @@ function App() {
   return (
     <Routes>
       <Route path="/login" element={
-        user ? <Navigate to="/dashboard" /> : <Login />
+        user ? (user.role === 'superadmin' ? <Navigate to="/superadmin" /> : <Navigate to="/dashboard" />) : <Login />
+      } />
+      <Route path="/superadmin/login" element={
+        user ? (user.role === 'superadmin' ? <Navigate to="/superadmin" /> : <Navigate to="/dashboard" />) : <SuperAdminLogin />
       } />
       <Route path="/*" element={
         <div className="app-shell">
@@ -116,6 +121,11 @@ function App() {
                   <AdminStaff />
                 </ProtectedRoute>
               } />
+              <Route path="/superadmin" element={
+                <ProtectedRoute superadminOnly>
+                  <SuperAdminDashboard />
+                </ProtectedRoute>
+              } />
               <Route path="/staff" element={
                 <ProtectedRoute staffOnly>
                   <StaffLayout />
@@ -132,7 +142,7 @@ function App() {
                 <Route path="animal-dispersal" element={<AnimalDispersalEntry />} />
                 <Route path="" element={<Navigate to="/staff/child-records" />} />
               </Route>
-              <Route path="/" element={<Navigate to="/dashboard" />} />
+              <Route path="/" element={<Navigate to={user?.role === 'superadmin' ? '/superadmin' : '/dashboard'} />} />
             </Routes>
           </main>
         </div>

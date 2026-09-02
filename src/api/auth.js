@@ -5,8 +5,31 @@ export const authApi = {
     const response = await api.post('/auth/login', credentials)
     return response.data
   },
+  superadminLogin: async (credentials) => {
+    const response = await api.post('/auth/superadmin-login', credentials)
+    return response.data
+  },
   changePassword: async (data) => {
     const response = await api.post('/auth/change-password', data)
+    return response.data
+  },
+}
+
+export const superAdminApi = {
+  getAdmins: async () => {
+    const response = await api.get('/superadmin/admins')
+    return response.data
+  },
+  createAdmin: async (data) => {
+    const response = await api.post('/superadmin/admins', data)
+    return response.data
+  },
+  toggleAdmin: async (id) => {
+    const response = await api.put(`/superadmin/admins/${id}/toggle`)
+    return response.data
+  },
+  deleteAdmin: async (id) => {
+    const response = await api.delete(`/superadmin/admins/${id}`)
     return response.data
   },
 }

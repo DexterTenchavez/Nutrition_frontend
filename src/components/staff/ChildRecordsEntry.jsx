@@ -23,7 +23,7 @@ const CHILD_STATUS_BADGES = {
 
 const ChildRecordsEntry = () => {
   const { user } = useAuth()
-  const isAdmin = user?.role === 'admin'
+  const isAdmin = user?.role === 'admin' || user?.role === 'superadmin'
   const userBarangay = user?.barangay || ''
   const { selectedBarangay, setSelectedBarangay, searchTerm, setSearchTerm, recordDate, setRecordDate, purok, setPurok, name, setName, selectMode, setSelectMode } = useStaffDataEntry()
 

@@ -30,12 +30,16 @@ api.interceptors.response.use(
   (error) => {
     // Check if this is a login request
     const isLoginRequest = error.config?.url?.includes('/auth/login')
+    const isSuperAdminLoginRequest = error.config?.url?.includes('/auth/superadmin-login')
+    const loginRedirectPath = isSuperAdminLoginRequest || JSON.parse(localStorage.getItem('user') || '{}')?.role === 'superadmin'
+      ? '/superadmin/login'
+      : '/login'
     
     // Only redirect on 401 if it's NOT a login request
-    if (error.response?.status === 401 && !isLoginRequest) {
+    if (error.response?.status === 401 && !isLoginRequest && !isSuperAdminLoginRequest) {
       localStorage.removeItem('token')
       localStorage.removeItem('user')
-      window.location.href = '/login'
+      window.location.href = loginRedirectPath
     }
     
     return Promise.reject(error)

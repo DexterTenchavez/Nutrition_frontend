@@ -14,7 +14,7 @@ import { FaSearch, FaTimes, FaFilter } from 'react-icons/fa'
 
 const BackyardGardeningEntry = () => {
   const { user } = useAuth()
-  const isAdmin = user?.role === 'admin'
+  const isAdmin = user?.role === 'admin' || user?.role === 'superadmin'
   const { selectedBarangay, setSelectedBarangay, searchTerm, setSearchTerm, recordDate, setRecordDate, purok, setPurok, name, setName, selectMode, setSelectMode } = useStaffDataEntry()
   const [formData, setFormData] = useState({
     barangay: user?.barangay || '',

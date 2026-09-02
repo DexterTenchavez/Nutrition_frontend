@@ -113,6 +113,11 @@
   color: var(--accent-contrast) !important;
 }
 
+.app-navbar .role-badge.role-superadmin {
+  background: #7B2CBF !important;
+  color: #ffffff !important;
+}
+
 .app-navbar .role-badge.role-staff {
   background: #4FA095 !important;
   color: #052824 !important;

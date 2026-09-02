@@ -1,15 +1,14 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth'
-import api from '../api/axios'
-import { BARANGAYS } from '../utils/constants'
+import { superAdminApi } from '../api/auth'
 import { Table, Button, Form, Alert, Modal, Badge, Spinner } from 'react-bootstrap'
 import StatCard from '../components/dashboard/StatCard'
 import nutritionLogo from '../assets/nutritionlogo.jpg'
 import './css/AdminStaff.css'
 
-const AdminStaff = () => {
+const SuperAdminDashboard = () => {
   const { user } = useAuth()
-  const [staff, setStaff] = useState([])
+  const [admins, setAdmins] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [showModal, setShowModal] = useState(false)
@@ -18,7 +17,6 @@ const AdminStaff = () => {
     email: '',
     password: '',
     confirmPassword: '',
-    barangay: '',
   })
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -27,15 +25,15 @@ const AdminStaff = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   useEffect(() => {
-    fetchStaff()
+    fetchAdmins()
   }, [])
 
-  const fetchStaff = async () => {
+  const fetchAdmins = async () => {
     try {
-      const response = await api.get('/admin/staff')
-      setStaff(response.data)
+      const data = await superAdminApi.getAdmins()
+      setAdmins(data)
     } catch (error) {
-      console.error('Error fetching staff:', error)
+      console.error('Error fetching admins:', error)
     } finally {
       setLoading(false)
     }
@@ -59,66 +57,62 @@ const AdminStaff = () => {
     setSubmitting(true)
 
     try {
-      await api.post('/admin/staff', {
+      await superAdminApi.createAdmin({
         username: formData.username,
         email: formData.email,
         password: formData.password,
-        barangay: formData.barangay,
       })
 
-      setSuccess('Staff created successfully!')
+      setSuccess('Admin created successfully!')
       setFormData({
         username: '',
         email: '',
         password: '',
         confirmPassword: '',
-        barangay: '',
       })
       setShowModal(false)
-      fetchStaff()
+      fetchAdmins()
     } catch (error) {
-      setError(error.response?.data?.message || 'Error creating staff')
+      setError(error.response?.data?.message || 'Error creating admin')
     } finally {
       setSubmitting(false)
     }
   }
 
-  const toggleStaffStatus = async (id) => {
+  const toggleAdminStatus = async (id) => {
     try {
-      await api.put(`/admin/staff/${id}/toggle`)
-      fetchStaff()
+      await superAdminApi.toggleAdmin(id)
+      fetchAdmins()
     } catch (error) {
-      console.error('Error toggling staff:', error)
-      alert('Error updating staff status')
+      console.error('Error toggling admin:', error)
+      alert('Error updating admin status')
     }
   }
 
-  const deleteStaff = async (id) => {
-    if (!confirm('Are you sure you want to delete this staff?')) return
+  const deleteAdmin = async (id, username) => {
+    if (!confirm(`Are you sure you want to delete the admin account "${username}"?`)) return
     try {
-      await api.delete(`/admin/staff/${id}`)
-      fetchStaff()
+      await superAdminApi.deleteAdmin(id)
+      fetchAdmins()
     } catch (error) {
-      console.error('Error deleting staff:', error)
-      alert('Error deleting staff')
+      console.error('Error deleting admin:', error)
+      alert('Error deleting admin')
     }
   }
 
-  if (!user || (user.role !== 'admin' && user.role !== 'superadmin')) {
-    return <div className="text-center py-5">Access denied. Admin only.</div>
+  if (!user || user.role !== 'superadmin') {
+    return <div className="text-center py-5">Access denied. Super Admin only.</div>
   }
 
-  const totalActive = staff.filter((s) => s.isActive).length
-  const totalInactive = staff.length - totalActive
-  const barangaysCovered = new Set(staff.map((s) => s.barangay)).size
+  const totalActive = admins.filter((a) => a.isActive).length
+  const totalInactive = admins.length - totalActive
 
-  const filteredStaff = staff.filter((s) => {
+  const filteredAdmins = admins.filter((a) => {
     const q = search.trim().toLowerCase()
     if (!q) return true
     return (
-      (s.username || '').toLowerCase().includes(q) ||
-      (s.email || '').toLowerCase().includes(q) ||
-      (s.barangay || '').toLowerCase().includes(q)
+      (a.username || '').toLowerCase().includes(q) ||
+      (a.email || '').toLowerCase().includes(q)
     )
   })
 
@@ -135,8 +129,8 @@ const AdminStaff = () => {
       <div className="admin-staff-header">
         <img className="admin-staff-header-logo" src={nutritionLogo} alt="Nutrition Logo" />
         <div className="admin-staff-header-body">
-          <h1 className="admin-staff-title">Staff Management</h1>
-          <p className="admin-staff-subtitle mb-0">Manage BNS staff accounts</p>
+          <h1 className="admin-staff-title">Admin Management</h1>
+          <p className="admin-staff-subtitle mb-0">Create and manage administrator accounts</p>
         </div>
         <div className="ms-auto text-end d-none d-md-block text-white-50" style={{ fontSize: '0.85rem' }}>
           {today}
@@ -145,17 +139,14 @@ const AdminStaff = () => {
 
       {/* Stat overview */}
       <div className="row g-3 mb-4">
-        <div className="col-6 col-lg-3">
-          <StatCard title="Total Staff" value={staff.length} color="primary" icon="people-fill" />
+        <div className="col-6 col-lg-4">
+          <StatCard title="Total Admins" value={admins.length} color="primary" icon="people-fill" />
         </div>
-        <div className="col-6 col-lg-3">
+        <div className="col-6 col-lg-4">
           <StatCard title="Active" value={totalActive} color="success" icon="person-check-fill" />
         </div>
-        <div className="col-6 col-lg-3">
+        <div className="col-6 col-lg-4">
           <StatCard title="Inactive" value={totalInactive} color="danger" icon="person-dash-fill" />
-        </div>
-        <div className="col-6 col-lg-3">
-          <StatCard title="Barangays" value={barangaysCovered} color="warning" icon="geo-alt-fill" />
         </div>
       </div>
 
@@ -165,28 +156,28 @@ const AdminStaff = () => {
           <i className="bi bi-search search-icon"></i>
           <Form.Control
             type="text"
-            placeholder="Search by name, email, or barangay…"
+            placeholder="Search by username or email…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
         <Button variant="success" className="admin-staff-add-btn" onClick={() => setShowModal(true)}>
-          <i className="bi bi-person-plus-fill"></i> Add Staff
+          <i className="bi bi-person-plus-fill"></i> Add Admin
         </Button>
       </div>
 
       {success && <Alert variant="success" onClose={() => setSuccess('')} dismissible>{success}</Alert>}
       {error && <Alert variant="danger" onClose={() => setError('')} dismissible>{error}</Alert>}
 
-      {/* Staff table */}
+      {/* Admin table */}
       <div className="dashboard-table-card">
         <div className="table-card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
           <h5>
             <i className="bi bi-person-lines-fill me-2 text-success"></i>
-            Staff Accounts
+            Administrator Accounts
           </h5>
           <span className="badge text-bg-light border" style={{ fontWeight: 600 }}>
-            {filteredStaff.length} shown
+            {filteredAdmins.length} shown
           </span>
         </div>
 
@@ -194,7 +185,7 @@ const AdminStaff = () => {
           <div className="text-center py-5">
             <Spinner animation="border" variant="success" />
           </div>
-        ) : staff.length === 0 ? (
+        ) : admins.length === 0 ? (
           <div className="text-center py-5">
             <img
               src={nutritionLogo}
@@ -208,11 +199,11 @@ const AdminStaff = () => {
                 marginBottom: '15px',
               }}
             />
-            <p className="mb-0 text-muted">No staff created yet</p>
+            <p className="mb-0 text-muted">No admins created yet</p>
           </div>
-        ) : filteredStaff.length === 0 ? (
+        ) : filteredAdmins.length === 0 ? (
           <div className="row-empty py-5 text-center text-muted">
-            No matching staff found for “{search}”
+            No matching admin found for “{search}”
           </div>
         ) : (
           <div className="table-responsive">
@@ -221,39 +212,37 @@ const AdminStaff = () => {
                 <tr>
                   <th>Username</th>
                   <th>Email</th>
-                  <th>Barangay</th>
                   <th>Status</th>
                   <th className="text-end">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredStaff.map((staffMember) => (
-                  <tr key={staffMember.id}>
+                {filteredAdmins.map((admin) => (
+                  <tr key={admin.id}>
                     <td>
-                      <span className="fw-semibold">{staffMember.username}</span>
+                      <span className="fw-semibold">{admin.username}</span>
                     </td>
-                    <td>{staffMember.email}</td>
-                    <td>{staffMember.barangay}</td>
+                    <td>{admin.email}</td>
                     <td>
-                      <span className={`badge ${staffMember.isActive ? 'text-bg-success' : 'text-bg-secondary'}`}>
-                        <i className={`bi ${staffMember.isActive ? 'bi-circle-fill' : 'bi-circle'} me-1`} style={{ fontSize: '0.6rem' }}></i>
-                        {staffMember.isActive ? 'Active' : 'Inactive'}
+                      <span className={`badge ${admin.isActive ? 'text-bg-success' : 'text-bg-secondary'}`}>
+                        <i className={`bi ${admin.isActive ? 'bi-circle-fill' : 'bi-circle'} me-1`} style={{ fontSize: '0.6rem' }}></i>
+                        {admin.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
                     <td className="text-end">
                       <Button
-                        variant={staffMember.isActive ? 'outline-warning' : 'outline-success'}
+                        variant={admin.isActive ? 'outline-warning' : 'outline-success'}
                         size="sm"
                         className="me-2"
-                        onClick={() => toggleStaffStatus(staffMember.id)}
+                        onClick={() => toggleAdminStatus(admin.id)}
                       >
-                        <i className={`bi ${staffMember.isActive ? 'bi-pause-circle' : 'bi-play-circle'} me-1`}></i>
-                        {staffMember.isActive ? 'Deactivate' : 'Activate'}
+                        <i className={`bi ${admin.isActive ? 'bi-pause-circle' : 'bi-play-circle'} me-1`}></i>
+                        {admin.isActive ? 'Deactivate' : 'Activate'}
                       </Button>
                       <Button
                         variant="outline-danger"
                         size="sm"
-                        onClick={() => deleteStaff(staffMember.id)}
+                        onClick={() => deleteAdmin(admin.id, admin.username)}
                       >
                         <i className="bi bi-trash me-1"></i>
                         Delete
@@ -267,7 +256,7 @@ const AdminStaff = () => {
         )}
       </div>
 
-      {/* Create Staff Modal */}
+      {/* Create Admin Modal */}
       <Modal show={showModal} onHide={() => setShowModal(false)} centered>
         <Modal.Header closeButton className="border-0 pb-0">
           <Modal.Title>
@@ -283,7 +272,7 @@ const AdminStaff = () => {
                 marginRight: '10px',
               }}
             />
-            Create Staff Account
+            Create Admin Account
           </Modal.Title>
         </Modal.Header>
         <Form onSubmit={handleSubmit}>
@@ -372,22 +361,6 @@ const AdminStaff = () => {
                 </Button>
               </div>
             </Form.Group>
-
-            <Form.Group className="mb-3">
-              <Form.Label>Barangay</Form.Label>
-              <Form.Select
-                value={formData.barangay}
-                onChange={(e) => setFormData({ ...formData, barangay: e.target.value })}
-                required
-              >
-                <option value="">Select Barangay</option>
-                {BARANGAYS.map((barangay) => (
-                  <option key={barangay} value={barangay}>
-                    {barangay}
-                  </option>
-                ))}
-              </Form.Select>
-            </Form.Group>
           </Modal.Body>
           <Modal.Footer className="border-0">
             <Button variant="outline-secondary" onClick={() => setShowModal(false)}>
@@ -400,7 +373,7 @@ const AdminStaff = () => {
                   Creating…
                 </>
               ) : (
-                'Create Staff'
+                'Create Admin'
               )}
             </Button>
           </Modal.Footer>
@@ -410,4 +383,4 @@ const AdminStaff = () => {
   )
 }
 
-export default AdminStaff
+export default SuperAdminDashboard

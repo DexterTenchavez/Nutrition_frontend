@@ -7,7 +7,7 @@ import SettingsModal from './SettingsModal'
 import './css/Navbar.css'
 
 const Navbar = () => {
-  const { user, logout, isAdmin } = useAuth()
+  const { user, logout, isAdmin, isSuperAdmin } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [showSettings, setShowSettings] = useState(false)
@@ -21,7 +21,7 @@ const Navbar = () => {
   return (
     <BsNavbar expand="lg" sticky="top" className="app-navbar shadow-sm" variant="dark">
       <Container>
-        <BsNavbar.Brand as={Link} to="/dashboard" className="brand-mark">
+        <BsNavbar.Brand as={Link} to={isSuperAdmin ? '/superadmin' : '/dashboard'} className="brand-mark">
           <span className="brand-icon">
             <img src={nutritionLogo} alt="Nutrition Logo" />
           </span>
@@ -45,6 +45,11 @@ const Navbar = () => {
             )}
             {isAdmin && (
               <>
+                {isSuperAdmin && (
+                  <Nav.Link as={Link} to="/superadmin" className={isActive('/superadmin') ? 'active' : ''}>
+                    Admin Management
+                  </Nav.Link>
+                )}
                 <Nav.Link as={Link} to="/overall-report" className={isActive('/overall-report') ? 'active' : ''}>
                   Overall Report
                 </Nav.Link>
@@ -59,8 +64,8 @@ const Navbar = () => {
           </Nav>
 
           <div className="user-chip">
-            <span className={`badge role-badge ${isAdmin ? 'role-admin' : 'role-staff'}`}>
-              {user.role}
+            <span className={`badge role-badge ${isSuperAdmin ? 'role-superadmin' : isAdmin ? 'role-admin' : 'role-staff'}`}>
+              {user.role === 'superadmin' ? 'Super Admin' : user.role}
             </span>
             <span className="username-text">{user.username}</span>
             <Button

@@ -2,7 +2,7 @@ import { Navigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { Spinner } from 'react-bootstrap'
 
-const ProtectedRoute = ({ children, adminOnly = false, staffOnly = false }) => {
+const ProtectedRoute = ({ children, adminOnly = false, staffOnly = false, superadminOnly = false }) => {
   const { user, loading } = useAuth()
 
   if (loading) {
@@ -14,11 +14,18 @@ const ProtectedRoute = ({ children, adminOnly = false, staffOnly = false }) => {
     )
   }
 
+  const isSuperAdmin = user?.role === 'superadmin'
+  const isAdmin = user?.role === 'admin' || isSuperAdmin
+
   if (!user) {
-    return <Navigate to="/login" replace />
+    return <Navigate to={superadminOnly ? '/superadmin/login' : '/login'} replace />
   }
 
-  if (adminOnly && user.role !== 'admin') {
+  if (superadminOnly && !isSuperAdmin) {
+    return <Navigate to="/dashboard" replace />
+  }
+
+  if (adminOnly && !isAdmin) {
     return <Navigate to="/dashboard" replace />
   }
 

@@ -58,7 +58,7 @@ const PregnantWomenEntry = () => {
     }
   }, [selectMode])
 
-  const isAdmin = user?.role === 'admin'
+  const isAdmin = user?.role === 'admin' || user?.role === 'superadmin'
 
   useEffect(() => {
     if (selectedBarangay) {
