@@ -2,13 +2,16 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import api from '../api/axios'
 import { BARANGAYS } from '../utils/constants'
-import { Card, Table, Button, Form, Alert, Modal, Badge, Spinner } from 'react-bootstrap'
+import { Table, Button, Form, Alert, Modal, Badge, Spinner } from 'react-bootstrap'
+import StatCard from '../components/dashboard/StatCard'
 import nutritionLogo from '../assets/nutritionlogo.jpg'
+import './css/AdminStaff.css'
 
 const AdminStaff = () => {
   const { user } = useAuth()
   const [staff, setStaff] = useState([])
   const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [formData, setFormData] = useState({
     username: '',
@@ -103,94 +106,154 @@ const AdminStaff = () => {
     return <div className="text-center py-5">Access denied. Admin only.</div>
   }
 
+  const totalActive = staff.filter((s) => s.isActive).length
+  const totalInactive = staff.length - totalActive
+  const barangaysCovered = new Set(staff.map((s) => s.barangay)).size
+
+  const filteredStaff = staff.filter((s) => {
+    const q = search.trim().toLowerCase()
+    if (!q) return true
+    return (
+      (s.username || '').toLowerCase().includes(q) ||
+      (s.email || '').toLowerCase().includes(q) ||
+      (s.barangay || '').toLowerCase().includes(q)
+    )
+  })
+
+  const today = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
+
   return (
-    <div>
-      {/* Header with Logo */}
-      <div className="d-flex align-items-center gap-3 mb-4">
-        <img 
-          src={nutritionLogo} 
-          alt="Nutrition Logo" 
-          style={{ 
-            width: '50px', 
-            height: '50px', 
-            objectFit: 'cover',
-            borderRadius: '50%',
-            border: '2px solid #198754'
-          }} 
-        />
-        <div>
-          <h1 className="mb-0">Staff Management</h1>
-          <small className="text-muted">Manage BNS staff accounts</small>
+    <div className="admin-staff-page">
+      {/* Header */}
+      <div className="admin-staff-header">
+        <img className="admin-staff-header-logo" src={nutritionLogo} alt="Nutrition Logo" />
+        <div className="admin-staff-header-body">
+          <h1 className="admin-staff-title">Staff Management</h1>
+          <p className="admin-staff-subtitle mb-0">Manage BNS staff accounts</p>
+        </div>
+        <div className="ms-auto text-end d-none d-md-block text-white-50" style={{ fontSize: '0.85rem' }}>
+          {today}
         </div>
       </div>
 
-      <div className="d-flex justify-content-end mb-4">
-        <Button variant="success" onClick={() => setShowModal(true)}>
-          <i className="bi bi-person-plus-fill me-2"></i>+ Add Staff
+      {/* Stat overview */}
+      <div className="row g-3 mb-4">
+        <div className="col-6 col-lg-3">
+          <StatCard title="Total Staff" value={staff.length} color="primary" icon="people-fill" />
+        </div>
+        <div className="col-6 col-lg-3">
+          <StatCard title="Active" value={totalActive} color="success" icon="person-check-fill" />
+        </div>
+        <div className="col-6 col-lg-3">
+          <StatCard title="Inactive" value={totalInactive} color="danger" icon="person-dash-fill" />
+        </div>
+        <div className="col-6 col-lg-3">
+          <StatCard title="Barangays" value={barangaysCovered} color="warning" icon="geo-alt-fill" />
+        </div>
+      </div>
+
+      {/* Toolbar */}
+      <div className="admin-staff-toolbar">
+        <div className="admin-staff-search">
+          <i className="bi bi-search search-icon"></i>
+          <Form.Control
+            type="text"
+            placeholder="Search by name, email, or barangay…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <Button variant="success" className="admin-staff-add-btn" onClick={() => setShowModal(true)}>
+          <i className="bi bi-person-plus-fill"></i> Add Staff
         </Button>
       </div>
 
-      {success && <Alert variant="success">{success}</Alert>}
-      {error && <Alert variant="danger">{error}</Alert>}
+      {success && <Alert variant="success" onClose={() => setSuccess('')} dismissible>{success}</Alert>}
+      {error && <Alert variant="danger" onClose={() => setError('')} dismissible>{error}</Alert>}
 
-      <Card className="border-0 shadow-sm">
-        <Card.Body>
-          {loading ? (
-            <div className="text-center py-4">
-              <Spinner animation="border" variant="primary" />
-            </div>
-          ) : staff.length === 0 ? (
-            <div className="text-center py-5">
-              <img 
-                src={nutritionLogo} 
-                alt="Nutrition Logo" 
-                style={{ 
-                  width: '60px', 
-                  height: '60px', 
-                  objectFit: 'cover',
-                  borderRadius: '50%',
-                  border: '2px solid #198754',
-                  marginBottom: '15px'
-                }} 
-              />
-              <p className="text-muted">No staff created yet</p>
-            </div>
-          ) : (
-            <Table responsive hover>
+      {/* Staff table */}
+      <div className="dashboard-table-card">
+        <div className="table-card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+          <h5>
+            <i className="bi bi-person-lines-fill me-2 text-success"></i>
+            Staff Accounts
+          </h5>
+          <span className="badge text-bg-light border" style={{ fontWeight: 600 }}>
+            {filteredStaff.length} shown
+          </span>
+        </div>
+
+        {loading ? (
+          <div className="text-center py-5">
+            <Spinner animation="border" variant="success" />
+          </div>
+        ) : staff.length === 0 ? (
+          <div className="text-center py-5">
+            <img
+              src={nutritionLogo}
+              alt="Nutrition Logo"
+              style={{
+                width: '60px',
+                height: '60px',
+                objectFit: 'cover',
+                borderRadius: '50%',
+                border: '2px solid #198754',
+                marginBottom: '15px',
+              }}
+            />
+            <p className="mb-0 text-muted">No staff created yet</p>
+          </div>
+        ) : filteredStaff.length === 0 ? (
+          <div className="row-empty py-5 text-center text-muted">
+            No matching staff found for “{search}”
+          </div>
+        ) : (
+          <div className="table-responsive">
+            <Table className="dashboard-table mb-0" hover>
               <thead>
                 <tr>
                   <th>Username</th>
                   <th>Email</th>
                   <th>Barangay</th>
                   <th>Status</th>
-                  <th>Actions</th>
+                  <th className="text-end">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {staff.map((staffMember) => (
+                {filteredStaff.map((staffMember) => (
                   <tr key={staffMember.id}>
-                    <td>{staffMember.username}</td>
+                    <td>
+                      <span className="fw-semibold">{staffMember.username}</span>
+                    </td>
                     <td>{staffMember.email}</td>
                     <td>{staffMember.barangay}</td>
                     <td>
-                      <Badge bg={staffMember.isActive ? 'success' : 'danger'}>
+                      <span className={`badge ${staffMember.isActive ? 'text-bg-success' : 'text-bg-secondary'}`}>
+                        <i className={`bi ${staffMember.isActive ? 'bi-circle-fill' : 'bi-circle'} me-1`} style={{ fontSize: '0.6rem' }}></i>
                         {staffMember.isActive ? 'Active' : 'Inactive'}
-                      </Badge>
+                      </span>
                     </td>
-                    <td>
+                    <td className="text-end">
                       <Button
-                        variant={staffMember.isActive ? 'warning' : 'success'}
+                        variant={staffMember.isActive ? 'outline-warning' : 'outline-success'}
                         size="sm"
                         className="me-2"
                         onClick={() => toggleStaffStatus(staffMember.id)}
                       >
+                        <i className={`bi ${staffMember.isActive ? 'bi-pause-circle' : 'bi-play-circle'} me-1`}></i>
                         {staffMember.isActive ? 'Deactivate' : 'Activate'}
                       </Button>
                       <Button
-                        variant="danger"
+                        variant="outline-danger"
                         size="sm"
                         onClick={() => deleteStaff(staffMember.id)}
                       >
+                        <i className="bi bi-trash me-1"></i>
                         Delete
                       </Button>
                     </td>
@@ -198,25 +261,25 @@ const AdminStaff = () => {
                 ))}
               </tbody>
             </Table>
-          )}
-        </Card.Body>
-      </Card>
+          </div>
+        )}
+      </div>
 
       {/* Create Staff Modal */}
-      <Modal show={showModal} onHide={() => setShowModal(false)}>
-        <Modal.Header closeButton>
+      <Modal show={showModal} onHide={() => setShowModal(false)} centered>
+        <Modal.Header closeButton className="border-0 pb-0">
           <Modal.Title>
-            <img 
-              src={nutritionLogo} 
-              alt="Logo" 
-              style={{ 
-                width: '30px', 
-                height: '30px', 
+            <img
+              src={nutritionLogo}
+              alt="Logo"
+              style={{
+                width: '30px',
+                height: '30px',
                 objectFit: 'cover',
                 borderRadius: '50%',
                 border: '1px solid #198754',
-                marginRight: '10px'
-              }} 
+                marginRight: '10px',
+              }}
             />
             Create Staff Account
           </Modal.Title>
@@ -284,12 +347,19 @@ const AdminStaff = () => {
               </Form.Select>
             </Form.Group>
           </Modal.Body>
-          <Modal.Footer>
-            <Button variant="secondary" onClick={() => setShowModal(false)}>
+          <Modal.Footer className="border-0">
+            <Button variant="outline-secondary" onClick={() => setShowModal(false)}>
               Cancel
             </Button>
             <Button type="submit" variant="success" disabled={submitting}>
-              {submitting ? 'Creating...' : 'Create Staff'}
+              {submitting ? (
+                <>
+                  <Spinner size="sm" animation="border" className="me-2" />
+                  Creating…
+                </>
+              ) : (
+                'Create Staff'
+              )}
             </Button>
           </Modal.Footer>
         </Form>

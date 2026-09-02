@@ -223,9 +223,14 @@ const ChildRecordsEntry = () => {
     return missing.length ? `Requires: ${missing.join(', ')}` : ''
   }
 
-  const handleExportExcel = () => {
-    exportOptPlusExcel({ barangay: selectedBarangay, records: filteredRecords })
+  const handleExportExcel = async () => {
+  try {
+    await exportOptPlusExcel({ barangay: selectedBarangay, records: filteredRecords })
+  } catch (err) {
+    console.error('Export failed:', err)
+    alert(`Export failed: ${err.message}`)
   }
+}
 
   const handleDateChange = (field, value) => {
     const updatedForm = { ...formData, [field]: value }

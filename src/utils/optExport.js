@@ -1,7 +1,9 @@
-import * as XLSX from 'xlsx'
+import ExcelJS from 'exceljs'
+import { saveAs } from 'file-saver'
 import { getWeightForAgeZScore } from './whoWeightForAge'
 import { getLengthForAgeZScore } from './whoHeightForAge'
 import { getWeightForLengthHeightZScore } from './whoWeightForLengthHeight'
+import nutritionLogo from '../assets/nutritionlogo.jpg'
 
 // OPT Plus status codes (per DOH OPT Plus workbook conventions):
 //   WFA: N (normal), UW (< -2 SD), SUW (< -3 SD), OW (> +2 SD)
@@ -35,162 +37,222 @@ export function getWfhStatusCode(record) {
   return 'Ob'
 }
 
-const AGE_GROUPS = [
-  ['0-5 months', 0, 5],
-  ['6-11 months', 6, 11],
-  ['12-23 months', 12, 23],
-  ['24-35 months', 24, 35],
-  ['36-47 months', 36, 47],
-  ['48-59 months', 48, 59],
-]
-
 const sexCode = (sex) => (sex === 'Male' ? 'M' : sex === 'Female' ? 'F' : '')
-
+const purokLabel = (purok) => (purok != null && purok !== '' ? `PUROK ${purok}` : '')
 const fmtDate = (value) => {
   if (!value) return ''
   const d = new Date(value)
   return isNaN(d) ? '' : d.toISOString().split('T')[0]
 }
 
-function tallyRecords(records, statusFn, categories) {
-  const rows = AGE_GROUPS.map(([label, min, max]) => ({
-    label,
-    min,
-    max,
-    counts: Object.fromEntries(categories.flatMap((c) => [[`${c}_b`, 0], [`${c}_g`, 0]])),
-    boys: 0,
-    girls: 0,
-  }))
-  for (const r of records) {
-    const age = parseInt(r.ageMonths, 10)
-    const code = statusFn(r)
-    const sc = sexCode(r.sex)
-    if (!code || !sc || isNaN(age)) continue
-    const group = rows.find((g) => age >= g.min && age <= g.max)
-    if (!group) continue
-    const key = `${code}_${sc === 'M' ? 'b' : 'g'}`
-    if (key in group.counts) group.counts[key]++
-    if (sc === 'M') group.boys++
-    else group.girls++
+// ---------------------------------------------------------------------------
+// Theme — matches the green (#198754) used throughout the app's docx reports
+// ---------------------------------------------------------------------------
+const THEME = {
+  headerFill: '198754',      // dark green banner
+  headerText: 'FFFFFF',
+  subFill: 'D1F2E0',         // light green info band
+  tableHeaderFill: '198754',
+  tableHeaderText: 'FFFFFF',
+  border: 'B7B7B7',
+  statusColors: {
+    N: { fill: '198754', text: 'FFFFFF' },   // Normal — green
+    UW: { fill: 'FFC107', text: '000000' },  // moderate — yellow
+    St: { fill: 'FFC107', text: '000000' },
+    MW: { fill: 'FFC107', text: '000000' },
+    SUW: { fill: 'DC3545', text: 'FFFFFF' }, // severe — red
+    SSt: { fill: 'DC3545', text: 'FFFFFF' },
+    SW: { fill: 'DC3545', text: 'FFFFFF' },
+    OW: { fill: '0DCAF0', text: '000000' },  // above normal — blue
+    T: { fill: '0DCAF0', text: '000000' },
+    Ob: { fill: '0DCAF0', text: '000000' },
+  },
+}
+
+const thinBorder = {
+  top: { style: 'thin', color: { argb: THEME.border } },
+  bottom: { style: 'thin', color: { argb: THEME.border } },
+  left: { style: 'thin', color: { argb: THEME.border } },
+  right: { style: 'thin', color: { argb: THEME.border } },
+}
+
+async function loadLogoBuffer() {
+  try {
+    const res = await fetch(nutritionLogo)
+    if (!res.ok) throw new Error(`Logo fetch failed: ${res.status}`)
+    return await res.arrayBuffer()
+  } catch (err) {
+    console.warn('Nutrition logo could not be loaded for the Excel export:', err)
+    return null
   }
-  return rows
 }
 
-function pushTallyBlock(aoa, title, headers, categories, tallies) {
-  aoa.push([], [title], ['Age Group', ...headers])
-  let totB = 0
-  let totG = 0
-  for (const { label, counts, boys, girls } of tallies) {
-    totB += boys
-    totG += girls
-    aoa.push([label, ...categories.map((c) => counts[`${c}_b`]), ...categories.map((c) => counts[`${c}_g`]), boys, girls, boys + girls])
-  }
-  aoa.push(['TOTAL', ...categories.map(() => ''), '', '', totB, totG, totB + totG])
-}
-
-function buildTallyAoA(barangay, records) {
-  const wfaCats = ['N', 'UW', 'SUW', 'OW']
-  const hfaCats = ['N', 'St', 'SSt', 'T']
-  const wflCats = ['N', 'MW', 'SW', 'OW', 'Ob']
-
-  const aoa = [
-    ['Republic of the Philippines'],
-    ['Department of Health'],
-    ['OPT Plus Form 1A. Barangay Tally and Summary of Preschool Children Aged 0-59 Months'],
-    [`Barangay: ${barangay || ''}    Municipality: UBAY    Province: BOHOL    Generated: ${new Date().toISOString().split('T')[0]}`],
-  ]
-
-  const mkHeaders = (cats) => cats.flatMap((c) => [`Boys (${c})`, `Girls (${c})`])
-  const wfa = tallyRecords(records, getWfaStatusCode, wfaCats)
-  pushTallyBlock(aoa, 'WEIGHT-FOR-AGE STATUS', [...mkHeaders(wfaCats), 'Total Boys', 'Total Girls', 'Total'], wfaCats, wfa)
-
-  const hfa = tallyRecords(records, getHfaStatusCode, hfaCats)
-  pushTallyBlock(aoa, 'LENGTH/HEIGHT-FOR-AGE STATUS', [...mkHeaders(hfaCats), 'Total Boys', 'Total Girls', 'Total'], hfaCats, hfa)
-
-  const wfl = tallyRecords(records, getWfhStatusCode, wflCats)
-  pushTallyBlock(aoa, 'WEIGHT FOR LENGTH/HEIGHT STATUS', [...mkHeaders(wflCats), 'Total Boys', 'Total Girls', 'Total'], wflCats, wfl)
-
-  return aoa
-}
-
-// Columns exactly as OPT Plus Form 1B:
-//   Child No. | Purok | Name of Mother or Caregiver | Child's Full Name |
-//   Sex | Age in Months | WFA_Stat | HFA_Stat | WFH_Stat
-function buildRosterAoA(barangay, records) {
-  const aoa = [
-    ['Republic of the Philippines'],
-    ['Department of Health'],
-    ['OPT Plus Form 1B. Barangay Child Master List'],
-    [`Barangay: ${barangay || ''}    Date Generated: ${new Date().toISOString().split('T')[0]}`],
-    [],
-    ['Child No.', 'Purok', 'Name of Mother or Caregiver', "Child's Full Name", 'Sex', 'Age in Months', 'WFA_Stat', 'HFA_Stat', 'WFH_Stat'],
-  ]
-  records.forEach((r, i) => {
-    aoa.push([
-      i + 1,
-      r.purok != null ? `PUROK ${r.purok}` : '',
-      r.motherOrCaregiver || '',
-      r.fullName || '',
-      sexCode(r.sex),
-      r.ageMonths ?? '',
-      getWfaStatusCode(r),
-      getHfaStatusCode(r),
-      getWfhStatusCode(r),
-    ])
+// ---------------------------------------------------------------------------
+// Build the styled "Nut_StatusTool" sheet
+// ---------------------------------------------------------------------------
+async function buildNutStatusToolSheet(workbook, barangay, records, year) {
+  const sheet = workbook.addWorksheet('Nut_StatusTool', {
+    views: [{ state: 'frozen', ySplit: 9 }],
   })
-  return aoa
-}
 
-// Clean & Update style sheet: per-child raw measurements
-function buildDetailsAoA(barangay, records) {
-  const aoa = [
-    ['OPT Plus - Clean and Update Data'],
-    [`Barangay: ${barangay || ''}    Date Generated: ${new Date().toISOString().split('T')[0]}`],
-    [],
-    ['Child Seq.', 'Purok', 'Name of Mother or Caregiver', "Child's Full Name", 'Sex', 'Age in Months', 'Date of Birth', 'Date Last Measured', 'WEIGHT (kg)', 'HEIGHT (cm)', 'WFA_Stat', 'HFA_Stat', 'WFH_Stat'],
+  const HEADERS = [
+    'Child Seq.',
+    'Address or Location',
+    'Name of Mother or Caregiver',
+    "Full Name of Child",
+    'Belongs to IP Group?',
+    'Sex',
+    'Date of Birth',
+    'Date Measured',
+    'Weight (kg)',
+    'Height (cm)',
+    'Age in Months',
+    'Weight for Age Status',
+    'Height for Age Status',
+    'Weight for Lt/Ht Status',
   ]
+  const COL_COUNT = HEADERS.length
+
+  sheet.columns = [
+    { width: 9 }, { width: 16 }, { width: 26 }, { width: 26 }, { width: 12 },
+    { width: 7 }, { width: 13 }, { width: 13 }, { width: 10 }, { width: 10 },
+    { width: 10 }, { width: 15 }, { width: 15 }, { width: 15 },
+  ]
+
+  // --- Logo ---
+  const logoBuffer = await loadLogoBuffer()
+  let topRow = 1
+  if (logoBuffer) {
+    const imageId = workbook.addImage({ buffer: logoBuffer, extension: 'jpeg' })
+    sheet.addImage(imageId, {
+      tl: { col: 0, row: 0 },
+      ext: { width: 60, height: 60 },
+    })
+    sheet.getRow(1).height = 46
+    topRow = 1
+  }
+
+  // --- Title banner (merged, green fill) ---
+  sheet.mergeCells(1, 2, 1, COL_COUNT)
+  const titleCell = sheet.getCell(1, 2)
+  titleCell.value = 'Community Level e-OPT PLUS Tool'
+  titleCell.font = { bold: true, size: 16, color: { argb: THEME.headerText } }
+  titleCell.alignment = { vertical: 'middle', horizontal: 'center' }
+  titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: THEME.headerFill } }
+  for (let c = 1; c <= COL_COUNT; c++) {
+    sheet.getCell(1, c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: THEME.headerFill } }
+  }
+
+  sheet.mergeCells(2, 1, 2, COL_COUNT)
+  const subtitleCell = sheet.getCell(2, 1)
+  subtitleCell.value = 'Republic of the Philippines  •  Department of Health  •  National Nutrition Council'
+  subtitleCell.font = { italic: true, size: 10, color: { argb: THEME.headerText } }
+  subtitleCell.alignment = { vertical: 'middle', horizontal: 'center' }
+  for (let c = 1; c <= COL_COUNT; c++) {
+    sheet.getCell(2, c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: THEME.headerFill } }
+  }
+  sheet.getRow(2).height = 20
+
+  // --- Info band (barangay / municipality / province / region / year) ---
+  sheet.mergeCells(3, 1, 3, COL_COUNT)
+  const infoCell = sheet.getCell(3, 1)
+  infoCell.value = `Barangay: ${barangay || ''}      Municipality: UBAY      Province: BOHOL      Region: VII Central Visayas      Year: ${year}`
+  infoCell.font = { bold: true, size: 11 }
+  infoCell.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 }
+  for (let c = 1; c <= COL_COUNT; c++) {
+    sheet.getCell(3, c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: THEME.subFill } }
+  }
+  sheet.getRow(3).height = 22
+  sheet.getRow(4).height = 6 // spacer
+
+  // --- Table header row (row 5) ---
+  const headerRowIdx = 5
+  const headerRow = sheet.getRow(headerRowIdx)
+  HEADERS.forEach((h, idx) => {
+    const cell = headerRow.getCell(idx + 1)
+    cell.value = h
+    cell.font = { bold: true, color: { argb: THEME.tableHeaderText }, size: 10 }
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: THEME.tableHeaderFill } }
+    cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true }
+    cell.border = thinBorder
+  })
+  headerRow.height = 30
+
+  // --- Data rows ---
+  let rowIdx = headerRowIdx + 1
   records.forEach((r, i) => {
-    aoa.push([
+    const wfa = getWfaStatusCode(r)
+    const hfa = getHfaStatusCode(r)
+    const wfh = getWfhStatusCode(r)
+
+    const values = [
       i + 1,
-      r.purok != null ? `PUROK ${r.purok}` : '',
+      purokLabel(r.purok),
       r.motherOrCaregiver || '',
       r.fullName || '',
+      '',
       sexCode(r.sex),
-      r.ageMonths ?? '',
       fmtDate(r.birthdate),
       fmtDate(r.recordedDate),
       r.weight ?? '',
       r.height ?? '',
-      getWfaStatusCode(r),
-      getHfaStatusCode(r),
-      getWfhStatusCode(r),
-    ])
+      r.ageMonths ?? '',
+      wfa,
+      hfa,
+      wfh,
+    ]
+
+    const row = sheet.getRow(rowIdx)
+    values.forEach((v, idx) => {
+      const cell = row.getCell(idx + 1)
+      cell.value = v
+      cell.border = thinBorder
+      cell.alignment = { vertical: 'middle', horizontal: idx <= 4 ? 'left' : 'center' }
+      cell.font = { size: 10 }
+    })
+
+    // Color-code the three status cells (columns 12, 13, 14)
+    ;[[12, wfa], [13, hfa], [14, wfh]].forEach(([col, code]) => {
+      const c = THEME.statusColors[code]
+      if (c) {
+        const cell = row.getCell(col)
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: c.fill } }
+        cell.font = { bold: true, size: 10, color: { argb: c.text } }
+      }
+    })
+
+    // Zebra striping on plain columns for readability
+    if (i % 2 === 1) {
+      for (let c = 1; c <= 11; c++) {
+        const cell = row.getCell(c)
+        if (!cell.fill) {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'F5F5F5' } }
+        }
+      }
+    }
+
+    rowIdx++
   })
-  return aoa
+
+  return sheet
 }
 
-export function exportOptPlusExcel({ barangay, records }) {
-  const wb = XLSX.utils.book_new()
+// ---------------------------------------------------------------------------
+// Main export — Nut_StatusTool only
+// ---------------------------------------------------------------------------
+export async function exportOptPlusExcel({ barangay, records }) {
+  const workbook = new ExcelJS.Workbook()
+  workbook.creator = 'Nutrition Management System'
+  workbook.created = new Date()
 
-  const tallyWs = XLSX.utils.aoa_to_sheet(buildTallyAoA(barangay, records))
-  tallyWs['!cols'] = new Array(16).fill({ wch: 11 })
-  tallyWs['!cols'][0] = { wch: 14 }
-  XLSX.utils.book_append_sheet(wb, tallyWs, 'OPT_Form1A')
+  const year = new Date().getFullYear()
+  await buildNutStatusToolSheet(workbook, barangay, records, year)
 
-  const rosterWs = XLSX.utils.aoa_to_sheet(buildRosterAoA(barangay, records))
-  rosterWs['!cols'] = [
-    { wch: 9 }, { wch: 12 }, { wch: 30 }, { wch: 30 }, { wch: 6 },
-    { wch: 13 }, { wch: 9 }, { wch: 9 }, { wch: 9 },
-  ]
-  XLSX.utils.book_append_sheet(wb, rosterWs, 'OPT_Form1B')
-
-  const detailsWs = XLSX.utils.aoa_to_sheet(buildDetailsAoA(barangay, records))
-  detailsWs['!cols'] = [
-    { wch: 9 }, { wch: 12 }, { wch: 30 }, { wch: 30 }, { wch: 6 }, { wch: 13 },
-    { wch: 13 }, { wch: 17 }, { wch: 12 }, { wch: 12 }, { wch: 9 }, { wch: 9 }, { wch: 9 },
-  ]
-  XLSX.utils.book_append_sheet(wb, detailsWs, 'Clean_Update')
+  const buffer = await workbook.xlsx.writeBuffer()
+  const blob = new Blob([buffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  })
 
   const safeName = (barangay || 'Barangay').replace(/[^A-Za-z0-9_-]+/g, '_')
-  XLSX.writeFile(wb, `OPT_Plus_${safeName}_${new Date().toISOString().split('T')[0]}.xlsx`)
+  saveAs(blob, `OPT_Plus_${safeName}_${new Date().toISOString().split('T')[0]}.xlsx`)
 }
