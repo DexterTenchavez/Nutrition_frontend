@@ -2,8 +2,9 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { Form, Button, Alert } from 'react-bootstrap'
-import './css/Login.css'
 import nutritionLogo from '../assets/nutritionlogo.jpg'
+import LoadingOverlay from '../components/common/LoadingOverlay'
+import './css/SuperAdminLogin.css'
 
 const SuperAdminLogin = () => {
   const [formData, setFormData] = useState({
@@ -57,95 +58,63 @@ const SuperAdminLogin = () => {
   }
 
   return (
-    <div className="login-page">
-      <div className="login-shell">
-        <div className="login-brand-panel">
-          <div className="login-brand-header">
-            <div className="login-brand-badge">
-              <i className="bi bi-shield-lock-fill"></i>
+    <div className="superadmin-login-page">
+      <LoadingOverlay show={loading} message="Authenticating..." />
+      
+      <div className="superadmin-login-container">
+        <div className="superadmin-login-card">
+          <div className="superadmin-login-header">
+            <div className="superadmin-login-logo">
+              {!logoFailed ? (
+                <img
+                  src={nutritionLogo}
+                  alt="National Nutrition Council"
+                  onError={() => setLogoFailed(true)}
+                />
+              ) : (
+                <div className="superadmin-logo-fallback">
+                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2C12 2 6 8.5 6 13.5C6 17.09 8.69 20 12 20C15.31 20 18 17.09 18 13.5C18 8.5 12 2 12 2Z" fill="#0B4F4A"/>
+                    <path d="M12 20C12 20 12 16 12 13" stroke="#E1F5EE" strokeWidth="1.4" strokeLinecap="round"/>
+                  </svg>
+                </div>
+              )}
             </div>
-            <span>Principal Access Portal</span>
+            <h1 className="superadmin-login-title">Super Admin</h1>
+            <p className="superadmin-login-subtitle">Restricted system administration access</p>
           </div>
 
-          <div className="login-brand-body">
-            <h1>Restricted system administration.</h1>
-            <p>Manage administrator accounts and oversee the nutrition platform.</p>
+          <div className="superadmin-login-divider">
+            <span>Secure Login</span>
           </div>
-
-          <div className="login-brand-features">
-            <div className="login-feature-card">
-              <div className="login-feature-icon">
-                <i className="bi bi-person-gear"></i>
-              </div>
-              <div className="login-feature-meta">
-                <div className="login-feature-value">1</div>
-                <div className="login-feature-label">Super admin seat</div>
-              </div>
-            </div>
-            <div className="login-feature-card">
-              <div className="login-feature-icon">
-                <i className="bi bi-shield-lock-fill"></i>
-              </div>
-              <div className="login-feature-meta">
-                <div className="login-feature-value">Admin</div>
-                <div className="login-feature-label">Account creation</div>
-              </div>
-            </div>
-            <div className="login-feature-card">
-              <div className="login-feature-icon">
-                <i className="bi bi-file-earmark-lock-fill"></i>
-              </div>
-              <div className="login-feature-meta">
-                <div className="login-feature-value">Private</div>
-                <div className="login-feature-label">Access only by URL</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="login-form-panel">
-          <div className="login-logo-wrap">
-            {!logoFailed ? (
-              <img
-                src={nutritionLogo}
-                alt="National Nutrition Council logo"
-                onError={() => setLogoFailed(true)}
-              />
-            ) : (
-              <div className="login-logo-fallback">
-                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 2C12 2 6 8.5 6 13.5C6 17.09 8.69 20 12 20C15.31 20 18 17.09 18 13.5C18 8.5 12 2 12 2Z" fill="#3E9B7E"/>
-                  <path d="M12 20C12 20 12 16 12 13" stroke="#E1F5EE" strokeWidth="1.4" strokeLinecap="round"/>
-                </svg>
-              </div>
-            )}
-          </div>
-
-          <p className="login-subtitle">Super Admin Access</p>
 
           {error && (
             <Alert
               variant={retryAfter ? 'warning' : 'danger'}
-              className="mb-3"
+              className="superadmin-alert"
               dismissible
               onClose={() => setError('')}
             >
+              <i className={`bi ${retryAfter ? 'bi-exclamation-triangle' : 'bi-exclamation-circle'} me-2`}></i>
               {error}
             </Alert>
           )}
 
           {retryAfter && (
-            <Alert variant="info" className="mb-3">
-              <strong>⏳ Rate Limit Exceeded</strong>
+            <Alert variant="info" className="superadmin-alert">
+              <i className="bi bi-clock-history me-2"></i>
+              <strong>Rate Limit Exceeded</strong>
               <p className="mb-0 mt-1">
                 Please try again in <strong>{formatRetryTime(retryAfter)}</strong>.
               </p>
             </Alert>
           )}
 
-          <Form onSubmit={handleSubmit} className="login-form">
-            <Form.Group className="mb-3">
-              <Form.Label>Username or email</Form.Label>
+          <Form onSubmit={handleSubmit} className="superadmin-login-form">
+            <Form.Group className="superadmin-form-group">
+              <Form.Label>
+                <i className="bi bi-person"></i> Username or Email
+              </Form.Label>
               <Form.Control
                 type="text"
                 value={formData.username}
@@ -153,12 +122,15 @@ const SuperAdminLogin = () => {
                 required
                 placeholder="Enter your username or email"
                 disabled={!!retryAfter}
+                className="superadmin-input"
               />
             </Form.Group>
 
-            <Form.Group className="mb-3">
-              <Form.Label>Password</Form.Label>
-              <div className="password-input-wrapper">
+            <Form.Group className="superadmin-form-group">
+              <Form.Label>
+                <i className="bi bi-lock"></i> Password
+              </Form.Label>
+              <div className="superadmin-password-wrapper">
                 <Form.Control
                   type={showPassword ? 'text' : 'password'}
                   value={formData.password}
@@ -166,24 +138,19 @@ const SuperAdminLogin = () => {
                   required
                   placeholder="Enter your password"
                   disabled={!!retryAfter}
+                  className="superadmin-input"
                 />
                 <Button
                   variant="link"
-                  className="password-toggle-btn"
+                  className="superadmin-password-toggle"
                   onClick={() => setShowPassword(!showPassword)}
                   tabIndex="-1"
                   disabled={!!retryAfter}
                 >
                   {showPassword ? (
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
-                      <line x1="1" y1="1" x2="23" y2="23"/>
-                    </svg>
+                    <i className="bi bi-eye-slash"></i>
                   ) : (
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                      <circle cx="12" cy="12" r="3"/>
-                    </svg>
+                    <i className="bi bi-eye"></i>
                   )}
                 </Button>
               </div>
@@ -191,12 +158,33 @@ const SuperAdminLogin = () => {
 
             <Button
               type="submit"
-              className="w-100 login-submit-btn"
+              className="superadmin-submit-btn"
               disabled={loading || !!retryAfter}
             >
-              {loading ? 'Logging in...' : 'Sign in as Super Admin'}
+              {loading ? (
+                <>
+                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                  Authenticating...
+                </>
+              ) : (
+                <>
+                  <i className="bi bi-shield-lock me-2"></i>
+                  Sign in as Super Admin
+                </>
+              )}
             </Button>
           </Form>
+
+          <div className="superadmin-login-footer">
+            <p className="superadmin-footer-text">
+              <i className="bi bi-shield-check me-1"></i>
+              Secure, encrypted connection
+            </p>
+            <a href="/login" className="superadmin-back-link">
+              <i className="bi bi-arrow-left me-1"></i>
+              Back to User Login
+            </a>
+          </div>
         </div>
       </div>
     </div>
